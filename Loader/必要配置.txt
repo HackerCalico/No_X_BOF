@@ -1,3 +1,5 @@
 Visual Studio Installer ------> 单个组件 ------> LLVM (clang-cl) + Clang ------> 安装
 
 Visual Studio ------> 项目属性 ------> 常规 ------> 平台工具集 (LLVM (clang-cl))
+
+配置完成后可直接运行
