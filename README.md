@@ -14,6 +14,8 @@
 
 我为此突破感到激动！
 
+![1.png](https://raw.githubusercontent.com/HackerCalico/No_X_Memory_ShellCode_Loader/main/Loader/run.png)
+
 ### 2. 规避优势
 
 无需解密，无需 X 内存，直接加载运行 R 内存中的 ShellCode 密文。
