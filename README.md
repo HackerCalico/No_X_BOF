@@ -4,7 +4,7 @@
 
 ### 1. 介绍
 
-<mark>无可执行权限加载 ShellCode</mark>
+<mark>新型 ShellCode Loader，无可执行权限加载 ShellCode</mark>
 
 项目: https://github.com/HackerCalico/No_X_Memory_ShellCode_Loader
 
