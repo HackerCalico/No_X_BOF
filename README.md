@@ -6,6 +6,8 @@
 
 <mark>新型 ShellCode Loader，无可执行权限加载 ShellCode。</mark>
 
+<mark>New ShellCode Loader, Loading ShellCode without executable permission.</mark>
+
 项目: https://github.com/HackerCalico/No_X_Memory_ShellCode_Loader
 
 博客: https://hackercalico.github.io/No_X_Memory_ShellCode_Loader.html
