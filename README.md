@@ -2,6 +2,10 @@
 
 ### English: https://hackercalico.github.io/No_X_Memory_ShellCode_Loader_EN.html
 
+### 点点 Star 🌟，非常感谢！这对我很重要！
+
+### Click Star 🌟, thank you very much! This is very important to me!
+
 ### 1. 介绍
 
 <mark>新型 ShellCode Loader，无可执行权限加载 ShellCode。</mark>
