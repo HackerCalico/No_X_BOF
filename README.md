@@ -4,7 +4,7 @@
 
 ### 请给我 Star 🌟，非常感谢！这对我很重要！
 
-### Please give me Star 🌟, thank you very much! This is very important to me!
+### Please give me Star 🌟, thank you very much! It is very important to me!
 
 ### 1. 介绍
 
