@@ -2,9 +2,9 @@
 
 ### English: https://hackercalico.github.io/No_X_Memory_ShellCode_Loader_EN.html
 
-### 点点 Star 🌟，非常感谢！这对我很重要！
+### 请给我 Star 🌟，非常感谢！这对我很重要！
 
-### Click Star 🌟, thank you very much! This is very important to me!
+### Please give me Star 🌟, thank you very much! This is very important to me!
 
 ### 1. 介绍
 
