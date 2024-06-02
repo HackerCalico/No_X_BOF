@@ -8,7 +8,7 @@
 
 ### 1. 介绍
 
-<mark>新型 ShellCode Loader，无可执行权限加载 ShellCode。</mark>
+<mark>新型 ShellCode 加载器，无可执行权限加载 ShellCode。</mark>
 
 <mark>New ShellCode Loader, Loading ShellCode without executable permission.</mark>
 
