@@ -1,9 +1,0 @@
-Translated by Google.
-
-Configuring Clang to support x64 inline assembly.
-
-Visual Studio Installer ------> Single Component ------> LLVM (clang-cl) + Clang ------> Install
-
-Visual Studio ------> Project Properties ------> Conventional ------> Platform Toolset (LLVM (clang-cl))
-
-After the configuration is completed, it can be run directly.
