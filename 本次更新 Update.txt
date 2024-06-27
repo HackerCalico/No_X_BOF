@@ -1,0 +1,9 @@
+1. 新的 ShellCode 样例。
+2. 代码优化。
+
+——————————————————————————————————————————
+
+Translated by Google.
+
+1. New ShellCode sample.
+2. Code optimization.
