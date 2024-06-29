@@ -1,0 +1,2 @@
+Interpreter\x64\Release\Interpreter.exe
+GenerateShellCode\x64\Release\GenerateShellCode.exe
