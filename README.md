@@ -60,6 +60,8 @@ pip install capstone
 
 <u>Loader</u>：ShellCode 加载器 (自定义汇编指令解释器)。
 
+<u>Interpreter ShellCode</u>：解释器 ShellCode 版。
+
 ### 5. 转换器实现
 
 为了减轻解释器的压力，我们的自定义汇编指令一定要设计成容易解释的格式。
