@@ -1,4 +1,4 @@
-﻿#include <iostream>
+#include <iostream>
 #include <windows.h>
 
 /*
@@ -27,9 +27,8 @@ typedef BOOL(WINAPI* pFileTimeToSystemTime)(FILETIME*, LPSYSTEMTIME);
 
 // 获取文件信息列表
 void GetFileInfoList(char* commandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID* pFuncAddr) {
-    *pOutputData = (char*)((pMalloc)(pFuncAddr[0]))(700);
+    *pOutputData = (char*)((pMalloc)(pFuncAddr[0]))(330);
     **pOutputData = '0';
-    *(*pOutputData + 1) = '\0';
     *pOutputDataLength = 1;
 
     WIN32_FIND_DATAA findData;
@@ -41,9 +40,6 @@ void GetFileInfoList(char* commandPara, int commandParaLength, char** pOutputDat
         }
         do {
             if (*findData.cFileName != '.') {
-                if (((pStrlen)pFuncAddr[3])(*pOutputData) > 330) {
-                    *pOutputData = (char*)((pRealloc)pFuncAddr[1])(*pOutputData, ((pStrlen)pFuncAddr[3])(*pOutputData) + 330);
-                }
                 SYSTEMTIME systemTime;
                 if (!((pFileTimeToSystemTime)pFuncAddr[15])(&(findData.ftLastWriteTime), &systemTime)) {
                     ((pFindClose)pFuncAddr[13])(hFind);
@@ -51,6 +47,7 @@ void GetFileInfoList(char* commandPara, int commandParaLength, char** pOutputDat
                 }
                 volatile char format[] = { '\n', '%', 'd', ',', '%', 's', ',', '%', 'l', 'l', 'u', ',', '%', '0', '4', 'd', '.', '%', '0', '2', 'd', '.', '%', '0', '2', 'd', ' ', '%', '0', '2', 'd', ':', '%', '0', '2', 'd', ':', '%', '0', '2', 'd', '\0' };
                 ((pSprintf_s)pFuncAddr[6])(*pOutputData + ((pStrlen)pFuncAddr[3])(*pOutputData), 330, (char*)format, (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? 1 : 0, findData.cFileName, ((ULONGLONG)findData.nFileSizeHigh << 32) | findData.nFileSizeLow, systemTime.wYear, systemTime.wMonth, systemTime.wDay, systemTime.wHour, systemTime.wMinute, systemTime.wSecond);
+                *pOutputData = (char*)((pRealloc)pFuncAddr[1])(*pOutputData, ((pStrlen)pFuncAddr[3])(*pOutputData) + 330);
             }
         } while (((pFindNextFileA)pFuncAddr[12])(hFind, &findData));
     }
