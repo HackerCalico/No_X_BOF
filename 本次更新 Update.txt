@@ -1,6 +1,7 @@
 1. 新的 ShellCode 样例。
 2. 代码优化。
 3. 解释器 ShellCode 版 (Interpreter ShellCode)。
+4. ExecuteCmd 代码 Bug 修复。
 
 ——————————————————————————————————————————
 
@@ -9,3 +10,4 @@ Translated by Google.
 1. New ShellCode sample.
 2. Code optimization.
 3. Interpreter ShellCode version (Interpreter ShellCode).
+4. ExecuteCmd code bug fix.
