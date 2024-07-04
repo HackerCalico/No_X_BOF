@@ -292,5 +292,6 @@ int main() {
     MagicInvoke(selfAsm, commandPara, commandParaLength, &outputData, &outputDataLength, funcAddr);
 
     // ShellCode 输出
+    *(outputData + outputDataLength) = '\0';
     cout << outputData;
 }
