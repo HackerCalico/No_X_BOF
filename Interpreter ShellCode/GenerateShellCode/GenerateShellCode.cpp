@@ -1,8 +1,6 @@
 ﻿#include <iostream>
 #include <windows.h>
 
-using namespace std;
-
 /*
 * 因为机器码存在跨 Section 情况，所以不像一般情况直接提取出来就能运行
 * 需要先映射到正确位置，并在开头添加 jmp MagicInvoke
@@ -11,6 +9,8 @@ using namespace std;
 * .magic
 * .rdata
 */
+
+using namespace std;
 
 int main(int argc, char* argv[]) {
     remove("Interpreter.bin");
