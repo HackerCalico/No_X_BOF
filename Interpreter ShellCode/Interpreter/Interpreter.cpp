@@ -4,8 +4,6 @@
 #include "FuncType.h"
 #include "Instruction.h"
 
-using namespace std;
-
 /*
 * ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 * 1.Release
@@ -17,6 +15,8 @@ using namespace std;
 * 清单文件: 生成清单(否)
 * 调试: 生成调试信息(否)
 */
+
+using namespace std;
 
 #pragma code_seg(".shell")
 
