@@ -2,9 +2,14 @@
 #include <windows.h>
 #include "resource.h"
 
-using namespace std;
+/*
+* ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+* 1.Release
+* 2.C/C++
+* 代码生成: 运行库(多线程)
+*/
 
-// Release
+using namespace std;
 
 int main() {
     // 从资源获取 ShellCode
