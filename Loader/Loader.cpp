@@ -3,8 +3,6 @@
 
 #include "Interpreter.h"
 
-using namespace std;
-
 /*
 * ⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 * 1.Release
@@ -17,6 +15,8 @@ using namespace std;
 * 清单文件: 生成清单(否)
 * 调试: 生成调试信息(否)
 */
+
+using namespace std;
 
 int main() {
     // 自定义汇编 (CMD 命令执行)
