@@ -1,13 +1,15 @@
-1. 新的 ShellCode 样例。
-2. 代码优化。
-3. 解释器 ShellCode 版 (Interpreter ShellCode)。
-4. ExecuteCmd 代码 Bug 修复。
+README 及 Web 文档不再更新，更新请看此文件。
+
+1. 更多 ShellCode 样例。
+2. 解释器 ShellCode 版 (Interpreter ShellCode)。
+3. 自定义汇编指令中的“_”改为“\0”，之前用“_”是为了方便阅读。
 
 ——————————————————————————————————————————
 
 Translated by Google.
 
-1. New ShellCode sample.
-2. Code optimization.
-3. Interpreter ShellCode version (Interpreter ShellCode).
-4. ExecuteCmd code bug fix.
+The README and Web documentation are no longer updated, please see this file for updates.
+
+1. More ShellCode samples.
+2. Interpreter ShellCode version (Interpreter ShellCode).
+3. The "_" in the custom assembly instruction is changed to "\0". The "_" was used before for the convenience of reading.
