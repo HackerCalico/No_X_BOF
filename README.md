@@ -8,9 +8,9 @@
 
 ### 1. 介绍
 
-<mark>新型 ShellCode 加载器，无可执行权限加载 ShellCode。</mark>
+<mark>这是一个免杀项目，与 PWN 无关！</mark>
 
-<mark>New ShellCode Loader, Loading ShellCode without executable permission.</mark>
+<mark>新型 ShellCode 加载器，无可执行权限加载 ShellCode。</mark>
 
 项目: https://github.com/HackerCalico/No_X_Memory_ShellCode_Loader
 
