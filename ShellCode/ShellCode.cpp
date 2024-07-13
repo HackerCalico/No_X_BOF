@@ -65,6 +65,7 @@ void ExecuteCmd(char* commandPara, int commandParaLength, char** pOutputData, in
 void GetFileInfoList(char* commandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID* pFuncAddr) {
     *pOutputData = (char*)((pMalloc)(pFuncAddr[0]))(330);
     **pOutputData = '0';
+    *(*pOutputData + 1) = '\0';
     *pOutputDataLength = 1;
 
     WIN32_FIND_DATAA findData;
