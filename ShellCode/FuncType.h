@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <windows.h>
 
 typedef void* (WINAPI* pMalloc)(size_t);
