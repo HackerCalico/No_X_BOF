@@ -1,3 +1,4 @@
+#include <map>
 #include <iostream>
 #include <windows.h>
 
@@ -118,19 +119,30 @@ DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, PDWORD_PTR pVtRegs, PDWORD_
     }
 }
 
+struct SelfAsm {
+    int mnemonicIndex;
+    char* opBit1;
+    char* op1;
+    char* opBit2;
+    char* op2;
+};
+
 // 解析自定义汇编
 void ParseSelfAsm(char* selfAsm, PDWORD_PTR pVtRegs) {
+    int selfAsmLength = strlen(selfAsm) + 1;
+    for (int i = 0; i < selfAsmLength; i++) {
+        if (*(selfAsm + i) == '_') {
+            *(selfAsm + i) = '\0';
+        }
+    }
+
     // 逐条解析
     int i = 0;
     int num = 0;
     char* endPtr;
-    int* vtAddrMapping = (int*)malloc(1000 * sizeof(int*)); // num -> 虚拟地址
-    int* numMapping = (int*)malloc(3000 * sizeof(int*)); // 虚拟地址 -> num
-    int* mnemonicIndexMapping = (int*)malloc(1000 * sizeof(int*)); // num -> mnemonicIndex
-    char** opBit1Mapping = (char**)malloc(1000 * sizeof(char*)); // num -> opBit1
-    char** op1Mapping = (char**)malloc(1000 * sizeof(char*)); // num -> op1
-    char** opBit2Mapping = (char**)malloc(1000 * sizeof(char*)); // num -> opBit2
-    char** op2Mapping = (char**)malloc(1000 * sizeof(char*)); // num -> op2
+    map<int, DWORD_PTR> vtAddrMapping; // num -> 虚拟地址
+    map<DWORD_PTR, int> numMapping; // 虚拟地址 -> num
+    map<DWORD_PTR, SelfAsm> selfAsmMap; // 虚拟地址 -> 自定义汇编
     while (selfAsm[i] != '!') {
         // 虚拟地址
         DWORD_PTR vtAddr = strtol(selfAsm + i, &endPtr, 16);
@@ -138,37 +150,41 @@ void ParseSelfAsm(char* selfAsm, PDWORD_PTR pVtRegs) {
         vtAddrMapping[num] = vtAddr;
         numMapping[vtAddr] = num;
 
+        SelfAsm currentSelfAsm;
+
         // 助记符序号
-        mnemonicIndexMapping[num] = atoi(selfAsm + i);
+        currentSelfAsm.mnemonicIndex = atoi(selfAsm + i);
         i += strlen(selfAsm + i) + 1;
 
         // 操作数1 位数
-        opBit1Mapping[num] = selfAsm + i;
+        currentSelfAsm.opBit1 = selfAsm + i;
         i += strlen(selfAsm + i) + 1;
 
         // 操作数1
-        op1Mapping[num] = selfAsm + i;
+        currentSelfAsm.op1 = selfAsm + i;
         i += strlen(selfAsm + i) + 1;
 
         // 操作数2 位数
-        opBit2Mapping[num] = selfAsm + i;
+        currentSelfAsm.opBit2 = selfAsm + i;
         i += strlen(selfAsm + i) + 1;
 
         // 操作数1
-        op2Mapping[num] = selfAsm + i;
+        currentSelfAsm.op2 = selfAsm + i;
         i += strlen(selfAsm + i) + 1;
 
+
+        selfAsmMap[vtAddr] = currentSelfAsm;
         num++;
     }
 
     // 逐条执行
     for (int i = 0; i < num; i++) {
         pVtRegs[16] = vtAddrMapping[i];
-        int mnemonicIndex = mnemonicIndexMapping[i];
-        char* opBit1 = opBit1Mapping[i];
-        char* op1 = op1Mapping[i];
-        char* opBit2 = opBit2Mapping[i];
-        char* op2 = op2Mapping[i];
+        int mnemonicIndex = selfAsmMap[pVtRegs[16]].mnemonicIndex;
+        char* opBit1 = selfAsmMap[pVtRegs[16]].opBit1;
+        char* op1 = selfAsmMap[pVtRegs[16]].op1;
+        char* opBit2 = selfAsmMap[pVtRegs[16]].opBit2;
+        char* op2 = selfAsmMap[pVtRegs[16]].op2;
 
         // 获取两个操作数的 类型(r寄存器/m内存空间) + 地址
         char opType1;
@@ -188,14 +204,6 @@ void ParseSelfAsm(char* selfAsm, PDWORD_PTR pVtRegs) {
             i--;
         }
     }
-
-    free(vtAddrMapping);
-    free(numMapping);
-    free(mnemonicIndexMapping);
-    free(opBit1Mapping);
-    free(op1Mapping);
-    free(opBit2Mapping);
-    free(op2Mapping);
 }
 
 // 魔法调用

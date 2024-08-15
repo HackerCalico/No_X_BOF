@@ -12,7 +12,7 @@ def ParseShellCode(shellcode):
     asm = ''
     useMnemonics = set()
     for instruction in instructions:
-        mnemonic = instruction.mnemonic.replace('rep stosb', 'repStosb')
+        mnemonic = instruction.mnemonic.replace('rep stosb', 'repStosb').replace('rep movsb', 'repMovsb')
         useMnemonics.add(mnemonic)
         ops = re.sub(r'(-?\b[0-9a-fA-F]+\b)', r'0x\1', instruction.op_str) # 补全立即数 0x 前缀
         asm += hex(instruction.address) + '_' + mnemonic + '_' + ops + '\n'

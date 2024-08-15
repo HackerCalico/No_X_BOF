@@ -32,5 +32,13 @@
     <ClInclude Include="Interpreter.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="AsmInstruction.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="AsmInstruction.asm">
+      <Filter>源文件</Filter>
+    </MASM>
   </ItemGroup>
 </Project>

@@ -1,32 +1,18 @@
 # No_X_Memory_ShellCode_Loader
 
-### English: https://hackercalico.github.io/No_X_Memory_ShellCode_Loader_EN.html
-
 ### 请给我 Star 🌟，非常感谢！这对我很重要！
 
 ### Please give me Star 🌟, thank you very much! It is very important to me!
 
 ### 1. 介绍
 
-<mark>这是一个免杀项目，与 PWN 无关！</mark>
-
-<mark>新型 ShellCode 加载器，无可执行权限加载 ShellCode。</mark>
-
-项目: https://github.com/HackerCalico/No_X_Memory_ShellCode_Loader
-
-博客: https://hackercalico.github.io/No_X_Memory_ShellCode_Loader.html
-
-该技术是我在 2024 年初首次提出的，当时发布了一个非常简单的 x86 小样例来证明可行性。因为今年时间过于紧张，直到现在我才发布了 x64 版本，可以说是一个相当完备的版本。
-
-我为此突破感到激动！
-
-![1.png](https://raw.githubusercontent.com/HackerCalico/No_X_Memory_ShellCode_Loader/main/run.png)
-
-### 2. 规避优势
+这是一个免杀项目，与 PWN 无关！
 
 无需解密，无需 X 内存，直接加载运行 R 内存中的 ShellCode 密文。
 
-避免了以下特征：
+x64 项目: https://github.com/HackerCalico/No_X_Memory_ShellCode_Loader
+
+规避了以下特征：
 
 (1) 申请 RWX 属性的内存。
 
@@ -34,7 +20,9 @@
 
 (3) 内存中出现 ShellCode 特征码。
 
-### 3. 技术原理
+![1.png](https://raw.githubusercontent.com/HackerCalico/No_X_Memory_ShellCode_Loader/main/run.png)
+
+### 2. 技术原理
 
 **加载流程：**
 
@@ -46,11 +34,11 @@
 
 **详细介绍：**
 
-https://hackercalico.github.io/No_X_Memory_ShellCode_Loader_Principle.html
+https://hackercalico.github.io/2024/08/13/%E6%97%A0%E5%8F%AF%E6%89%A7%E8%A1%8C%E6%9D%83%E9%99%90%E5%8A%A0%E8%BD%BD%20ShellCode%20%E6%8A%80%E6%9C%AF%E5%8E%9F%E7%90%86/
 
-### 4. 项目文件
+### 3. 项目文件
 
-<u>ShellCode</u>：CMD 命令执行 ShellCode & 获取文件信息列表 ShellCode。
+<u>ShellCode</u>：多种 ShellCode 源码。
 
 <u>Converter</u>：自定义汇编指令转换器。
 
@@ -60,9 +48,9 @@ pip install capstone
 
 <u>Loader</u>：ShellCode 加载器 (自定义汇编指令解释器)。
 
-<u>Interpreter ShellCode</u>：解释器 ShellCode 版。
+<u>GenerateAsmInstruction</u>：用于生成 Loader\AsmInstruction.asm 函数汇编指令。
 
-### 5. 转换器实现
+### 4. 转换器使用与实现
 
 为了减轻解释器的压力，我们的自定义汇编指令一定要设计成容易解释的格式。
 
@@ -120,7 +108,7 @@ asm.txt：
 选择: 3
 0_4_q_pq70+i20_q_q38_......2ed_3_q__q__!
 
-PVOID mnemonicMapping[] = { Push, Pop, ......, Jle };
+PVOID mnemonicMap[] = { Push, Pop, ......, Jle };
 ```
 
 0_4_q_pq70+i20_q_q38 为第一条自定义汇编指令，! 为整个自定义汇编指令的结束标志。
@@ -151,7 +139,7 @@ q 表示 QWORD。
 
 q38 表示 R9，同理偏移。
 
-### 6. 解释器实现
+### 5. 解释器实现
 
 **(1) 创建虚拟栈和虚拟寄存器**
 
@@ -253,8 +241,8 @@ DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, PDWORD_PTR pVtRegs, PDWORD_
 通过解析得到的当前指令的下标获取当前指令的处理函数指针。
 
 ```c
-PVOID mnemonicMapping[] = { Push, Pop, ......, Jle };
-PVOID instructionFunc = mnemonicMapping[mnemonicIndex];
+PVOID mnemonicMap[] = { Push, Pop, ......, AsmJle };
+PVOID instructionFunc = mnemonicMap[mnemonicIndex];
 ```
 
 <mark>下面举几种指令的处理函数的例子：</mark>
@@ -307,7 +295,7 @@ mov eax, 0x11111111
 <u>Cmp 指令</u>
 
 ```c
-else if (instructionFunc == Cmp || instructionFunc == Test) {
+else if (instructionFunc == AsmCmp || instructionFunc == AsmTest) {
      ((void(*)(...))instructionFunc)(opBit1, opAddr1, opAddr2, pVtRegs);
 }
 ```
@@ -315,7 +303,7 @@ else if (instructionFunc == Cmp || instructionFunc == Test) {
 将两个操作数的值赋值到 r10 和 r11，计算完成后将标志寄存器的值赋值到 vtEFL。
 
 ```c
-void Cmp(char opBit1, DWORD_PTR opAddr1, DWORD_PTR opAddr2, PDWORD_PTR pVtRegs) {
+void AsmCmp(char opBit1, DWORD_PTR opAddr1, DWORD_PTR opAddr2, PDWORD_PTR pVtRegs) {
     __asm {
         mov r8, qword ptr[opAddr1]
         mov r9, qword ptr[opAddr2]
@@ -365,7 +353,7 @@ void Jcc(PVOID instructionFunc, DWORD_PTR opAddr1, PDWORD_PTR pVtRegs) {
 作为具体的 Jcc 指令的处理函数，先将 vtEFL 的值赋值到标志寄存器，再判断是否跳转。
 
 ```c
-int Je(DWORD_PTR vtEFL) {
+int AsmJe(DWORD_PTR vtEFL) {
     int isJmp = 1;
     __asm {
         mov rax, vtEFL
@@ -390,7 +378,7 @@ int Je(DWORD_PTR vtEFL) {
 调用完 Windows API 之后，要将真实寄存器的值覆盖虚拟寄存器的值。
 
 ```c
-void Call(DWORD_PTR opAddr1, PDWORD_PTR pVtRegs) {
+void AsmCall(DWORD_PTR opAddr1, PDWORD_PTR pVtRegs) {
     // 保存真实栈顶栈底
     DWORD_PTR realRSP;
     DWORD_PTR realRBP;

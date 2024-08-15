@@ -5,7 +5,7 @@ registers32 = ['eax', 'ebx', 'ecx', 'edx', 'esi', 'edi', 'r8d', 'r9d', 'r10d', '
 registers16 = ['ax', 'bx', 'cx', 'dx', 'si', 'di', 'r8w', 'r9w', 'r10w', 'r11w', 'r12w', 'r13w', 'r14w', 'r15w', 'sp', 'bp']
 registersLow8 = ['al', 'bl', 'cl', 'dl', 'sil', 'dil', 'r8b', 'r9b', 'r10b', 'r11b', 'r12b', 'r13b', 'r14b', 'r15b', 'spl', 'bpl']
 
-mnemonics = ['push', 'pop', 'call', 'ret', 'mov', 'movsx', 'movzx', 'movsxd', 'lea', 'add', 'inc', 'sub', 'cmp', 'imul', 'and', 'or', 'xor', 'test', 'shl', 'cdqe', 'repStosb', 'jmp', 'je', 'jne', 'jbe', 'jl', 'jle']
+mnemonics = ['push', 'pop', 'call', 'ret', 'mov', 'movsx', 'movzx', 'movsxd', 'lea', 'add', 'inc', 'sub', 'cmp', 'imul', 'and', 'or', 'xor', 'test', 'shl', 'cdqe', 'repStosb', 'repMovsb', 'jmp', 'je', 'jne', 'jbe', 'jl', 'jge', 'jle']
 
 def FormatOp(op):
     # 不存在 or 立即数
@@ -70,9 +70,9 @@ def FormatAsm(asm):
         if opBit2 == '?':
             opBit2 = opBit1
 
-        print(address + '\\0""' + mnemonic + '\\0""' + opBit1 + '\\0""' + op1 + '\\0""' + opBit2 + '\\0""' + op2 + '\\0""', end='')
+        print(address + '_' + mnemonic + '_' + opBit1 + '_' + op1 + '_' + opBit2 + '_' + op2 + '_', end='')
 
-    mnemonicMapping = '!\n\nPVOID mnemonicMapping[] = { '
+    mnemonicMap = '!\n\nPVOID mnemonicMap[] = { '
     for mnemonic in mnemonics:
-        mnemonicMapping += mnemonic[0].upper() + mnemonic[1:] + ', '
-    print(mnemonicMapping[:-2] + ' };\n')
+        mnemonicMap += mnemonic[0].upper() + mnemonic[1:] + ', '
+    print(mnemonicMap[:-2] + ' };\n')
