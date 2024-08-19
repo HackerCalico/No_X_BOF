@@ -1,4 +1,4 @@
-; Ô´Âë: GenerateAsmInstruction\Instruction
+; æºç : GenerateAsmInstruction\Instruction
 
 .CODE
     AsmCall PROC
