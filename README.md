@@ -69,7 +69,7 @@ Payload (BOF 函数偏移 + .text 重定位名称 + 混淆映射 + 自定义汇�
 
 运行 Loader\Loader.cpp 即可。
 
-需要配置 LLVM (clang-cl): Visual Studio Installer ---> 单个组件 ---> LLVM (clang-cl) 和 Clang ---> 安装
+需要配置 LLVM (clang-cl) 以支持 x64 内联汇编: Visual Studio Installer ---> 单个组件 ---> LLVM (clang-cl) 和 Clang ---> 安装
 
 ### 3. 代码实现
 
