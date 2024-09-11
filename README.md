@@ -20,7 +20,7 @@ x64 项目: https://github.com/HackerCalico/No_X_Memory_ShellCode_Loader
 
 (3) 内存中出现 ShellCode 特征码。
 
-![1.png](https://raw.githubusercontent.com/HackerCalico/No_X_Memory_ShellCode_Loader/main/run.png)
+[![1.png](https://raw.githubusercontent.com/HackerCalico/No_X_Memory_ShellCode_Loader/main/run.png)](https://github.com/HackerCalico/No_X_BOF/blob/No_X_Memory_ShellCode_Loader/run.png)
 
 ### 2. 技术原理
 
