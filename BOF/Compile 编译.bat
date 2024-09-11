@@ -1,0 +1,1 @@
+gcc -c bof.c -o bof.o -O2 -fno-optimize-sibling-calls -mno-avx -mno-avx2 -mno-sse -mno-sse2 -mno-sse3 -mno-ssse3 -mno-sse4 -mno-sse4.1 -mno-sse4.2

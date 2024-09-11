@@ -18,27 +18,19 @@
     <ClCompile Include="Loader.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Instruction.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="Interpreter.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Instruction.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Instruction.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="Interpreter.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="AsmInstruction.h">
+    <ClInclude Include="Instruction.h">
       <Filter>头文件</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <MASM Include="AsmInstruction.asm">
-      <Filter>源文件</Filter>
-    </MASM>
   </ItemGroup>
 </Project>

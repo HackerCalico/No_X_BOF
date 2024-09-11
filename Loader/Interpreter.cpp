@@ -1,108 +1,111 @@
-#include <map>
-#include <iostream>
-#include <windows.h>
-
+#include "Interpreter.h"
 #include "Instruction.h"
 
-using namespace std;
+PVOID pVtStack = NULL;
+DWORD_PTR initRIP = 0x12345678;
 
 // 计算 (未考虑“*”)
-DWORD_PTR calculate(DWORD_PTR number1, DWORD_PTR number2, char symbol) {
-    switch (symbol)
-    {
-    case '+':
+DWORD_PTR Calculate(DWORD_PTR number1, DWORD_PTR number2, char symbol, char* obfMap) {
+    if (symbol == obfMap['+']) {
         return number1 + number2;
-    case '-':
+    }
+    else if (symbol == obfMap['-']) {
         return number1 - number2;
     }
+    throw exception("Symbol incorrect.");
 }
 
 // 解析算式 (未考虑“*”)
-void ParseFormula(char* op, char** pFormula, char** symbols) {
-    int n = 1;
+void ParseFormula(char* op, char** formula, char** symbols, char* obfMap) {
+    int index = 1;
     int opLength = strlen(op);
     for (int i = 0; i < opLength; i++) {
-        switch (op[i])
-        {
-        case '+':
-            pFormula[n] = symbols[0];
+        if (*(op + i) == obfMap['+']) {
+            formula[index] = symbols[0];
             *(op + i) = '\0';
-            n += 2;
-            break;
-        case '-':
-            pFormula[n] = symbols[1];
+            index += 2;
+        }
+        else if (*(op + i) == obfMap['-']) {
+            formula[index] = symbols[1];
             *(op + i) = '\0';
-            n += 2;
-            break;
+            index += 2;
         }
     }
-    n = 0;
+    index = 0;
     for (int i = 0; i < opLength; i += strlen(op + i) + 1) {
-        pFormula[n] = op + i;
-        n += 2;
+        formula[index] = op + i;
+        index += 2;
     }
 }
 
-// 获取操作数值的 类型(r寄存器/m内存空间) + 地址
-DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, PDWORD_PTR pVtRegs, PDWORD_PTR opNumber) {
-    char* endPtr;
-    char tempOp[50] = "";
-    char* symbols[] = { (char*)"+", (char*)"-" };
-    char* formula[] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
-
+// 获取操作数值的 Type(i立即数/r寄存器/m内存空间) & 地址
+DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, PDWORD_PTR vtRegs, DWORD_PTR* pOpNumber, char* obfMap) {
+    // cout << "CurrentOp: " << op << endl; // 调试
     // 立即数
-    if (op[0] == 'i') {
-        *opNumber = strtol(op + 1, &endPtr, 16);
-        return (DWORD_PTR)opNumber;
+    if (*op == obfMap['i']) {
+        if (pOpNumber == NULL) {
+            throw exception("IMM failed.");
+        }
+        char* endPtr;
+        *pOpNumber = strtoull(op + 1, &endPtr, 16);
+        if (*endPtr != '\0') {
+            throw exception("IMM incorrect.");
+        }
+        if (pOpType1 != NULL) {
+            *pOpType1 = 'i';
+        }
+        return (DWORD_PTR)pOpNumber;
     }
     // lea [] / ptr []
-    else if (op[0] == 'l' || op[0] == 'p') {
-        // 拷贝操作数 (解析算式过程会导致变化)
-        strcpy_s(tempOp, sizeof(tempOp), op);
+    else if (*op == obfMap['l'] || *op == obfMap['p']) {
         // 解析算式 (未考虑“*”)
-        ParseFormula(op + 1, formula, symbols);
+        char tempOp[50] = "";
+        string add = string(1, obfMap['+']);
+        string sub = string(1, obfMap['-']);
+        char* symbols[] = { (char*)add.c_str(), (char*)sub.c_str() };
+        char* formula[] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
+        strcpy_s(tempOp, sizeof(tempOp), op + 1);
+        ParseFormula(tempOp, formula, symbols, obfMap);
         // 计算 (未考虑“*”)
+        char symbol = obfMap['+'];
         DWORD_PTR number1 = 0;
-        DWORD_PTR number2;
-        char symbol = '+';
+        DWORD_PTR number2 = NULL;
         for (int i = 0; formula[i] != NULL; i++) {
-            switch (formula[i][0])
-            {
-            case 'i':
+            if (*formula[i] == obfMap['i']) {
                 DWORD_PTR tempNumber; // 存储数字
-                GetOpTypeAndAddr(formula[i], NULL, pVtRegs, &tempNumber);
-                number1 = calculate(number1, tempNumber, symbol);
-                break;
-            case 'q':
-                number2 = *(PDWORD64)GetOpTypeAndAddr(formula[i], NULL, pVtRegs, NULL);
-                number1 = calculate(number1, number2, symbol);
-                break;
-            case 'd':
-                number2 = *(PDWORD)GetOpTypeAndAddr(formula[i], NULL, pVtRegs, NULL);
-                number1 = calculate(number1, number2, symbol);
-                break;
-            case 'w':
-                number2 = *(PWORD)GetOpTypeAndAddr(formula[i], NULL, pVtRegs, NULL);
-                number1 = calculate(number1, number2, symbol);
-                break;
-            case 'b':
-                number2 = *(PBYTE)GetOpTypeAndAddr(formula[i], NULL, pVtRegs, NULL);
-                number1 = calculate(number1, number2, symbol);
-                break;
-            case '+':
-                symbol = '+';
-                break;
-            case '-':
-                symbol = '-';
-                break;
+                GetOpTypeAndAddr(formula[i], NULL, vtRegs, &tempNumber, obfMap);
+                number1 = Calculate(number1, tempNumber, symbol, obfMap);
+            }
+            else if (*formula[i] == obfMap['q']) {
+                number2 = *(PDWORD64)GetOpTypeAndAddr(formula[i], NULL, vtRegs, NULL, obfMap);
+                number1 = Calculate(number1, number2, symbol, obfMap);
+            }
+            else if (*formula[i] == obfMap['d']) {
+                number2 = *(PDWORD)GetOpTypeAndAddr(formula[i], NULL, vtRegs, NULL, obfMap);
+                number1 = Calculate(number1, number2, symbol, obfMap);
+            }
+            else if (*formula[i] == obfMap['w']) {
+                number2 = *(PWORD)GetOpTypeAndAddr(formula[i], NULL, vtRegs, NULL, obfMap);
+                number1 = Calculate(number1, number2, symbol, obfMap);
+            }
+            else if (*formula[i] == obfMap['b']) {
+                number2 = *(PBYTE)GetOpTypeAndAddr(formula[i], NULL, vtRegs, NULL, obfMap);
+                number1 = Calculate(number1, number2, symbol, obfMap);
+            }
+            else if (*formula[i] == obfMap['+']) {
+                symbol = obfMap['+'];
+            }
+            else if (*formula[i] == obfMap['-']) {
+                symbol = obfMap['-'];
             }
         }
-        // 还原操作数
-        strcpy_s(op, sizeof(tempOp), tempOp);
         // lea []
-        if (op[0] == 'l') {
-            *opNumber = number1;
-            return (DWORD_PTR)opNumber;
+        if (*op == obfMap['l']) {
+            if (pOpNumber == NULL) {
+                throw exception("lea failed.");
+            }
+            *pOpNumber = number1;
+            return (DWORD_PTR)pOpNumber;
         }
         // ptr []
         if (pOpType1 != NULL) {
@@ -111,105 +114,83 @@ DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, PDWORD_PTR pVtRegs, PDWORD_
         return number1;
     }
     // 寄存器
-    else {
+    else if (*op == obfMap['q'] || *op == obfMap['d'] || *op == obfMap['w'] || *op == obfMap['b']) {
+        char* endPtr;
+        DWORD_PTR offset = strtoull(op + 1, &endPtr, 16);
+        if (*endPtr != '\0') {
+            throw exception("Reg offset incorrect.");
+        }
         if (pOpType1 != NULL) {
             *pOpType1 = 'r';
         }
-        return (DWORD_PTR)pVtRegs + strtol(op + 1, &endPtr, 16);
+        return (DWORD_PTR)vtRegs + offset;
     }
+    throw exception("Op type not exist."); // 不是 OpType
 }
 
-struct SelfAsm {
-    int mnemonicIndex;
-    char* opBit1;
-    char* op1;
-    char* opBit2;
-    char* op2;
-};
+// 运行 BOF 函数
+void RunBofFunc(char* bofFuncName, BofPayload& bofPayload, PDWORD_PTR vtRegs) {
+    DWORD_PTR bofFuncVtAddr = bofPayload.bofFuncOffsetMap[bofFuncName];
+    for (int index = bofPayload.indexMap[bofFuncVtAddr]; index < bofPayload.selfAsmLength; index++) {
+        vtRegs[16] = bofPayload.vtAddrMap[index];
+        int mnemonicIndex = bofPayload.selfAsmMap[vtRegs[16]]->mnemonicIndex;
+        char* opBit1 = bofPayload.selfAsmMap[vtRegs[16]]->opBit1;
+        char* op1 = bofPayload.selfAsmMap[vtRegs[16]]->op1;
+        char* opBit2 = bofPayload.selfAsmMap[vtRegs[16]]->opBit2;
+        char* op2 = bofPayload.selfAsmMap[vtRegs[16]]->op2;
 
-// 解析自定义汇编
-void ParseSelfAsm(char* selfAsm, PDWORD_PTR pVtRegs) {
-    int selfAsmLength = strlen(selfAsm) + 1;
-    for (int i = 0; i < selfAsmLength; i++) {
-        if (*(selfAsm + i) == '_') {
-            *(selfAsm + i) = '\0';
+        // 调试
+        /*cout << "Register:\n";
+        for (int i = 0; i < 18; i++) {
+            cout << dec << i << " " << hex << vtRegs[i] << endl;
         }
-    }
+        cout << "Index:" << dec << index;
+        cout << " VtAddr:" << hex << vtRegs[16];
+        cout << " MnemonicIndex:" << dec << mnemonicIndex;
+        cout << " OpBit1:" << opBit1;
+        cout << " Op1:" << op1;
+        cout << " OpBit2:" << opBit2;
+        cout << " Op2:" << op2 << endl;*/
 
-    // 逐条解析
-    int i = 0;
-    int num = 0;
-    char* endPtr;
-    map<int, DWORD_PTR> vtAddrMapping; // num -> 虚拟地址
-    map<DWORD_PTR, int> numMapping; // 虚拟地址 -> num
-    map<DWORD_PTR, SelfAsm> selfAsmMap; // 虚拟地址 -> 自定义汇编
-    while (selfAsm[i] != '!') {
-        // 虚拟地址
-        DWORD_PTR vtAddr = strtol(selfAsm + i, &endPtr, 16);
-        i += strlen(selfAsm + i) + 1;
-        vtAddrMapping[num] = vtAddr;
-        numMapping[vtAddr] = num;
-
-        SelfAsm currentSelfAsm;
-
-        // 助记符序号
-        currentSelfAsm.mnemonicIndex = atoi(selfAsm + i);
-        i += strlen(selfAsm + i) + 1;
-
-        // 操作数1 位数
-        currentSelfAsm.opBit1 = selfAsm + i;
-        i += strlen(selfAsm + i) + 1;
-
-        // 操作数1
-        currentSelfAsm.op1 = selfAsm + i;
-        i += strlen(selfAsm + i) + 1;
-
-        // 操作数2 位数
-        currentSelfAsm.opBit2 = selfAsm + i;
-        i += strlen(selfAsm + i) + 1;
-
-        // 操作数1
-        currentSelfAsm.op2 = selfAsm + i;
-        i += strlen(selfAsm + i) + 1;
-
-
-        selfAsmMap[vtAddr] = currentSelfAsm;
-        num++;
-    }
-
-    // 逐条执行
-    for (int i = 0; i < num; i++) {
-        pVtRegs[16] = vtAddrMapping[i];
-        int mnemonicIndex = selfAsmMap[pVtRegs[16]].mnemonicIndex;
-        char* opBit1 = selfAsmMap[pVtRegs[16]].opBit1;
-        char* op1 = selfAsmMap[pVtRegs[16]].op1;
-        char* opBit2 = selfAsmMap[pVtRegs[16]].opBit2;
-        char* op2 = selfAsmMap[pVtRegs[16]].op2;
-
-        // 获取两个操作数的 类型(r寄存器/m内存空间) + 地址
-        char opType1;
+        // 获取两个操作数的 Type(i立即数/r寄存器/m内存空间) & 地址
+        char opType1 = NULL;
         DWORD_PTR opAddr1 = NULL;
         DWORD_PTR opAddr2 = NULL;
-        DWORD_PTR opNumber; // 存储数字
-        if (strlen(op1)) {
-            opAddr1 = GetOpTypeAndAddr(op1, &opType1, pVtRegs, &opNumber);
+        DWORD_PTR opNumber = NULL; // 存储数字
+        if (*op1 != '\0') {
+            opAddr1 = GetOpTypeAndAddr(op1, &opType1, vtRegs, &opNumber, bofPayload.obfMap);
+            if (opAddr1 == NULL || opType1 == NULL) {
+                throw exception("Op1 incorrect.");
+            }
+            // cout << "Op1 Addr: " << hex << opAddr1 << endl; // 调试
         }
-        if (strlen(op2)) {
-            opAddr2 = GetOpTypeAndAddr(op2, NULL, pVtRegs, &opNumber);
+        else if (*op2 != '\0') {
+            throw exception("Op2 incorrect.");
+        }
+        if (*op2 != '\0') {
+            opAddr2 = GetOpTypeAndAddr(op2, NULL, vtRegs, &opNumber, bofPayload.obfMap);
+            if (opAddr2 == NULL) {
+                throw exception("Op2 incorrect.");
+            }
+            // cout << "Op2 Addr: " << hex << opAddr2 << endl; // 调试
         }
 
         // 调用指令
-        if (InvokeInstruction(mnemonicIndex, opType1, opBit1[0], opAddr1, opBit2[0], opAddr2, pVtRegs)) {
-            i = numMapping[pVtRegs[16]]; // Jcc 指令跳转
-            i--;
+        if (InvokeInstruction(mnemonicIndex, opType1, *opBit1, opAddr1, *opBit2, opAddr2, vtRegs, bofPayload.obfMap)) {
+            if (vtRegs[16] == initRIP) {
+                return;
+            }
+            index = bofPayload.indexMap[vtRegs[16]]; // Jcc 指令跳转
+            index--;
         }
     }
 }
 
-// 魔法调用
-void MagicInvoke(char* selfAsm, char* commandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID* pFuncAddr) {
+void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, char*& outputData, int& outputDataLength, PVOID* specialParaList, BofPayload& bofPayload) {
     // 创建虚拟栈
-    PVOID vtStack = malloc(0x10000);
+    if (pVtStack == NULL) {
+        pVtStack = malloc(0x10000);
+    }
 
     // 创建虚拟寄存器
     /*
@@ -232,29 +213,177 @@ void MagicInvoke(char* selfAsm, char* commandPara, int commandParaLength, char**
     * 16 RIP
     * 17 EFL
     */
-    DWORD_PTR vtRegs[18] = { 0 };
-    vtRegs[14] = vtRegs[15] = (DWORD_PTR)vtStack + 0x9000;
+    DWORD_PTR vtRegs[18];
+    vtRegs[16] = initRIP;
+    vtRegs[14] = vtRegs[15] = (DWORD_PTR)pVtStack + 0x9000;
 
     // 设置虚拟寄存器的初值
     /*
-    * ShellCode(commandPara, commandParaLength, &outputData, &outputDataLength, funcAddr);
-    * lea rax, [funcAddr]
+    * BofFunc(&commandPara, commandParaLength, &outputData, &outputDataLength, specialParaList);
+    * lea rax, [specialParaList]
     * mov qword ptr [rsp+20h], rax
     * lea r9, [outputDataLength]
     * lea r8, [outputData]
     * mov edx, dword ptr [commandParaLength]
     * lea rcx, [commandPara]
-    * call ShellCode
+    * call BofFunc
     */
-    vtRegs[0] = (DWORD_PTR)pFuncAddr;
+    vtRegs[0] = (DWORD_PTR)specialParaList;
     *(PDWORD_PTR)(vtRegs[14] + 0x20) = vtRegs[0];
-    vtRegs[7] = (DWORD_PTR)pOutputDataLength;
-    vtRegs[6] = (DWORD_PTR)pOutputData;
+    vtRegs[7] = (DWORD_PTR)&outputDataLength;
+    vtRegs[6] = (DWORD_PTR)&outputData;
     vtRegs[3] = commandParaLength;
-    vtRegs[2] = (DWORD_PTR)commandPara;
-    vtRegs[14] = vtRegs[14] - sizeof(DWORD_PTR);
+    vtRegs[2] = (DWORD_PTR)&commandPara;
+    vtRegs[14] -= sizeof(DWORD_PTR);
+    *(PDWORD_PTR)vtRegs[14] = vtRegs[16];
 
-    // 解析自定义汇编
-    ParseSelfAsm(selfAsm, vtRegs);
-    free(vtStack);
+    // 运行 BOF 函数
+    RunBofFunc(bofFuncName, bofPayload, vtRegs);
+}
+
+// .text 重定位
+char* TextReloc(char* op, int& relocIndex, vector<string>& textRelocNameVector, BofPayload& bofPayload) {
+    char relocAddr[18];
+    char* rip = strstr(op, (string(1, bofPayload.obfMap['r']) + "0000000000000000").c_str());
+    if (rip != NULL) {
+        if (!strcmp(textRelocNameVector[relocIndex].c_str(), ".rdata")) {
+            sprintf_s(relocAddr, sizeof(relocAddr), "%c%016llx", bofPayload.obfMap['i'], (DWORD_PTR)bofPayload.pRdata);
+            memcpy(rip, relocAddr, 17);
+        }
+        else {
+            char dllName[50];
+            sprintf_s(dllName, sizeof(dllName), "%s", textRelocNameVector[relocIndex].c_str());
+            char* dollar = strchr(dllName, '$');
+            if (dollar != NULL) {
+                *dollar = '\0';
+                char* funcName = dllName + strlen(dllName) + 1;
+                HMODULE hDll;
+                if (!strcmp(dllName, "Ntdll") || !strcmp(dllName, "Kernel32")) {
+                    hDll = GetModuleHandleA(dllName);
+                }
+                else {
+                    hDll = LoadLibraryA(dllName);
+                }
+                if (hDll != NULL) {
+                    DWORD_PTR funcAddr = (DWORD_PTR)GetProcAddress(hDll, funcName);
+                    if (funcAddr != NULL) {
+                        PVOID relocPtr = malloc(sizeof(DWORD_PTR));
+                        *(PDWORD_PTR)relocPtr = funcAddr;
+                        bofPayload.relocPtrVector.push_back(relocPtr);
+                        sprintf_s(relocAddr, sizeof(relocAddr), "%c%016llx", bofPayload.obfMap['i'], (DWORD_PTR)bofPayload.relocPtrVector.back());
+                        memcpy(rip, relocAddr, 17);
+                    }
+                    else {
+                        throw exception("GetProcAddress failed.");
+                    }
+                }
+                else {
+                    throw exception("Get Dll failed.");
+                }
+            }
+            else {
+                throw exception("Can not reloc.");
+            }
+        }
+        relocIndex++;
+    }
+    return op;
+}
+
+// 解析 Payload
+void ParsePayload(char* payload, int payloadLength, BofPayload& bofPayload) {
+    // 提取 BOF 函数偏移 + .text 重定位名称 + 混淆映射 + 自定义汇编 + .rdata
+    int bofFuncOffsetDictLength = strlen(payload);
+    bofPayload.bofFuncOffsetMap = (json::parse(payload)).get<map<string, int>>();
+    // cout << "BofFuncOffsetMap:\n" << payload << endl; // 调试
+
+    char* textRelocNameList = payload + bofFuncOffsetDictLength + 1;
+    int textRelocNameListLength = strlen(textRelocNameList);
+    vector<string> textRelocNameVector = json::parse(textRelocNameList);
+    // cout << "TextRelocNameVector:\n" << textRelocNameList << endl; // 调试
+
+    char* obfDict = textRelocNameList + textRelocNameListLength + 1;
+    int obfDictLength = strlen(obfDict);
+    map<string, string> obfDictMap = (json::parse(obfDict)).get<map<string, string>>();
+    bofPayload.obfMap = (char*)malloc(sizeof(char) * 130);
+    for (const auto& pair : obfDictMap) {
+        char* endPtr;
+        int index = strtoull(pair.first.c_str(), &endPtr, 16);
+        if (*endPtr != '\0') {
+            throw exception("obfMap incorrect.");
+        }
+        bofPayload.obfMap[index] = pair.second[0];
+    }
+    // cout << "ObfDict:\n" << obfDict << endl; // 调试
+
+    char* selfAsmOriginal = obfDict + obfDictLength + 1;
+    int selfAsmLength = strlen(selfAsmOriginal);
+    bofPayload.selfAsm = (char*)malloc(selfAsmLength + 1);
+    memcpy(bofPayload.selfAsm, selfAsmOriginal, selfAsmLength + 1);
+    // cout << "SelfAsm:\n" << bofPayload.selfAsm << endl; // 调试
+
+    bofPayload.rdataLength = payloadLength - bofFuncOffsetDictLength - textRelocNameListLength - obfDictLength - selfAsmLength - 4;
+    bofPayload.pRdata = malloc(bofPayload.rdataLength);
+    memcpy(bofPayload.pRdata, selfAsmOriginal + selfAsmLength + 1, bofPayload.rdataLength);
+    // cout << "pRdata:\n" << bofPayload.pRdata << endl; // 调试
+
+    // 解析自定义汇编 & .text 重定位
+    for (int i = 0; i < selfAsmLength; i++) {
+        if (*(bofPayload.selfAsm + i) == bofPayload.obfMap['_']) {
+            *(bofPayload.selfAsm + i) = '\0';
+        }
+    }
+    int index = 0;
+    int offset = 0;
+    int relocIndex = 0;
+    while (*(bofPayload.selfAsm + offset) != '\0') {
+        // 虚拟地址
+        char* endPtr;
+        DWORD_PTR vtAddr = strtoull(bofPayload.selfAsm + offset, &endPtr, 16);
+        if (*endPtr != '\0') {
+            throw exception("VtAddr incorrect.");
+        }
+        offset += strlen(bofPayload.selfAsm + offset) + 1;
+        bofPayload.vtAddrMap[index] = vtAddr;
+        bofPayload.indexMap[vtAddr] = index;
+
+        SelfAsm* pCurrentSelfAsm = (SelfAsm*)malloc(sizeof(SelfAsm));
+
+        // 助记符序号
+        pCurrentSelfAsm->mnemonicIndex = atoi(bofPayload.selfAsm + offset);
+        offset += strlen(bofPayload.selfAsm + offset) + 1;
+
+        // 操作数1 位数
+        pCurrentSelfAsm->opBit1 = bofPayload.selfAsm + offset;
+        offset += strlen(bofPayload.selfAsm + offset) + 1;
+
+        // 操作数1
+        pCurrentSelfAsm->op1 = TextReloc(bofPayload.selfAsm + offset, relocIndex, textRelocNameVector, bofPayload);
+        offset += strlen(bofPayload.selfAsm + offset) + 1;
+
+        // 操作数2 位数
+        pCurrentSelfAsm->opBit2 = bofPayload.selfAsm + offset;
+        offset += strlen(bofPayload.selfAsm + offset) + 1;
+
+        // 操作数2
+        pCurrentSelfAsm->op2 = TextReloc(bofPayload.selfAsm + offset, relocIndex, textRelocNameVector, bofPayload);
+        offset += strlen(bofPayload.selfAsm + offset) + 1;
+
+        bofPayload.selfAsmMap[vtAddr] = pCurrentSelfAsm;
+        index++;
+    }
+    bofPayload.selfAsmLength = index;
+
+    // 调试
+    /*cout << "SelfAsmLength: " << bofPayload.selfAsmLength << endl;
+    for (int index = 0; index < bofPayload.selfAsmLength; index++) {
+        cout << "Index: " << bofPayload.indexMap[bofPayload.vtAddrMap[index]];
+        cout << " VtAddr: " << hex << bofPayload.vtAddrMap[index];
+        SelfAsm* pSelfAsm = bofPayload.selfAsmMap[bofPayload.vtAddrMap[index]];
+        cout << " MnemonicIndex: " << dec << pSelfAsm->mnemonicIndex;
+        cout << " OpBit1: " << pSelfAsm->opBit1;
+        cout << " Op1: " << pSelfAsm->op1;
+        cout << " OpBit2: " << pSelfAsm->opBit2;
+        cout << " Op2: " << pSelfAsm->op2 << endl;
+    }*/
 }
