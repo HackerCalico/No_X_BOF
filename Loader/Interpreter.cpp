@@ -4,7 +4,7 @@
 PVOID pVtStack = NULL;
 DWORD_PTR initRIP = 0x12345678;
 
-// ¼ÆËã (Î´¿¼ÂÇ¡°*¡±)
+// è®¡ç®— (æœªè€ƒè™‘â€œ*â€)
 DWORD_PTR Calculate(DWORD_PTR number1, DWORD_PTR number2, char symbol, char* obfMap) {
     if (symbol == obfMap['+']) {
         return number1 + number2;
@@ -15,7 +15,7 @@ DWORD_PTR Calculate(DWORD_PTR number1, DWORD_PTR number2, char symbol, char* obf
     throw exception("Symbol incorrect.");
 }
 
-// ½âÎöËãÊ½ (Î´¿¼ÂÇ¡°*¡±)
+// è§£æç®—å¼ (æœªè€ƒè™‘â€œ*â€)
 void ParseFormula(char* op, char** formula, char** symbols, char* obfMap) {
     int index = 1;
     int opLength = strlen(op);
@@ -38,10 +38,10 @@ void ParseFormula(char* op, char** formula, char** symbols, char* obfMap) {
     }
 }
 
-// »ñÈ¡²Ù×÷ÊıÖµµÄ Type(iÁ¢¼´Êı/r¼Ä´æÆ÷/mÄÚ´æ¿Õ¼ä) & µØÖ·
+// è·å–æ“ä½œæ•°å€¼çš„ Type(iç«‹å³æ•°/rå¯„å­˜å™¨/må†…å­˜ç©ºé—´) & åœ°å€
 DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, PDWORD_PTR vtRegs, DWORD_PTR* pOpNumber, char* obfMap) {
-    // cout << "CurrentOp: " << op << endl; // µ÷ÊÔ
-    // Á¢¼´Êı
+    // cout << "CurrentOp: " << op << endl; // è°ƒè¯•
+    // ç«‹å³æ•°
     if (*op == obfMap['i']) {
         if (pOpNumber == NULL) {
             throw exception("IMM failed.");
@@ -58,7 +58,7 @@ DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, PDWORD_PTR vtRegs, DWORD_PT
     }
     // lea [] / ptr []
     else if (*op == obfMap['l'] || *op == obfMap['p']) {
-        // ½âÎöËãÊ½ (Î´¿¼ÂÇ¡°*¡±)
+        // è§£æç®—å¼ (æœªè€ƒè™‘â€œ*â€)
         char tempOp[50] = "";
         string add = string(1, obfMap['+']);
         string sub = string(1, obfMap['-']);
@@ -66,13 +66,13 @@ DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, PDWORD_PTR vtRegs, DWORD_PT
         char* formula[] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
         strcpy_s(tempOp, sizeof(tempOp), op + 1);
         ParseFormula(tempOp, formula, symbols, obfMap);
-        // ¼ÆËã (Î´¿¼ÂÇ¡°*¡±)
+        // è®¡ç®— (æœªè€ƒè™‘â€œ*â€)
         char symbol = obfMap['+'];
         DWORD_PTR number1 = 0;
         DWORD_PTR number2 = NULL;
         for (int i = 0; formula[i] != NULL; i++) {
             if (*formula[i] == obfMap['i']) {
-                DWORD_PTR tempNumber; // ´æ´¢Êı×Ö
+                DWORD_PTR tempNumber; // å­˜å‚¨æ•°å­—
                 GetOpTypeAndAddr(formula[i], NULL, vtRegs, &tempNumber, obfMap);
                 number1 = Calculate(number1, tempNumber, symbol, obfMap);
             }
@@ -113,7 +113,7 @@ DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, PDWORD_PTR vtRegs, DWORD_PT
         }
         return number1;
     }
-    // ¼Ä´æÆ÷
+    // å¯„å­˜å™¨
     else if (*op == obfMap['q'] || *op == obfMap['d'] || *op == obfMap['w'] || *op == obfMap['b']) {
         char* endPtr;
         DWORD_PTR offset = strtoull(op + 1, &endPtr, 16);
@@ -125,10 +125,10 @@ DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, PDWORD_PTR vtRegs, DWORD_PT
         }
         return (DWORD_PTR)vtRegs + offset;
     }
-    throw exception("Op type not exist."); // ²»ÊÇ OpType
+    throw exception("Op type not exist."); // ä¸æ˜¯ OpType
 }
 
-// ÔËĞĞ BOF º¯Êı
+// è¿è¡Œ BOF å‡½æ•°
 void RunBofFunc(char* bofFuncName, BofPayload& bofPayload, PDWORD_PTR vtRegs) {
     DWORD_PTR bofFuncVtAddr = bofPayload.bofFuncOffsetMap[bofFuncName];
     for (int index = bofPayload.indexMap[bofFuncVtAddr]; index < bofPayload.selfAsmLength; index++) {
@@ -139,7 +139,7 @@ void RunBofFunc(char* bofFuncName, BofPayload& bofPayload, PDWORD_PTR vtRegs) {
         char* opBit2 = bofPayload.selfAsmMap[vtRegs[16]]->opBit2;
         char* op2 = bofPayload.selfAsmMap[vtRegs[16]]->op2;
 
-        // µ÷ÊÔ
+        // è°ƒè¯•
         /*cout << "Register:\n";
         for (int i = 0; i < 18; i++) {
             cout << dec << i << " " << hex << vtRegs[i] << endl;
@@ -152,17 +152,17 @@ void RunBofFunc(char* bofFuncName, BofPayload& bofPayload, PDWORD_PTR vtRegs) {
         cout << " OpBit2:" << opBit2;
         cout << " Op2:" << op2 << endl;*/
 
-        // »ñÈ¡Á½¸ö²Ù×÷ÊıµÄ Type(iÁ¢¼´Êı/r¼Ä´æÆ÷/mÄÚ´æ¿Õ¼ä) & µØÖ·
+        // è·å–ä¸¤ä¸ªæ“ä½œæ•°çš„ Type(iç«‹å³æ•°/rå¯„å­˜å™¨/må†…å­˜ç©ºé—´) & åœ°å€
         char opType1 = NULL;
         DWORD_PTR opAddr1 = NULL;
         DWORD_PTR opAddr2 = NULL;
-        DWORD_PTR opNumber = NULL; // ´æ´¢Êı×Ö
+        DWORD_PTR opNumber = NULL; // å­˜å‚¨æ•°å­—
         if (*op1 != '\0') {
             opAddr1 = GetOpTypeAndAddr(op1, &opType1, vtRegs, &opNumber, bofPayload.obfMap);
             if (opAddr1 == NULL || opType1 == NULL) {
                 throw exception("Op1 incorrect.");
             }
-            // cout << "Op1 Addr: " << hex << opAddr1 << endl; // µ÷ÊÔ
+            // cout << "Op1 Addr: " << hex << opAddr1 << endl; // è°ƒè¯•
         }
         else if (*op2 != '\0') {
             throw exception("Op2 incorrect.");
@@ -172,27 +172,27 @@ void RunBofFunc(char* bofFuncName, BofPayload& bofPayload, PDWORD_PTR vtRegs) {
             if (opAddr2 == NULL) {
                 throw exception("Op2 incorrect.");
             }
-            // cout << "Op2 Addr: " << hex << opAddr2 << endl; // µ÷ÊÔ
+            // cout << "Op2 Addr: " << hex << opAddr2 << endl; // è°ƒè¯•
         }
 
-        // µ÷ÓÃÖ¸Áî
+        // è°ƒç”¨æŒ‡ä»¤
         if (InvokeInstruction(mnemonicIndex, opType1, *opBit1, opAddr1, *opBit2, opAddr2, vtRegs, bofPayload.obfMap)) {
             if (vtRegs[16] == initRIP) {
                 return;
             }
-            index = bofPayload.indexMap[vtRegs[16]]; // Jcc Ö¸ÁîÌø×ª
+            index = bofPayload.indexMap[vtRegs[16]]; // Jcc æŒ‡ä»¤è·³è½¬
             index--;
         }
     }
 }
 
 void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, char*& outputData, int& outputDataLength, PVOID* specialParaList, BofPayload& bofPayload) {
-    // ´´½¨ĞéÄâÕ»
+    // åˆ›å»ºè™šæ‹Ÿæ ˆ
     if (pVtStack == NULL) {
         pVtStack = malloc(0x10000);
     }
 
-    // ´´½¨ĞéÄâ¼Ä´æÆ÷
+    // åˆ›å»ºè™šæ‹Ÿå¯„å­˜å™¨
     /*
     * 0  RAX
     * 1  RBX
@@ -217,7 +217,7 @@ void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, c
     vtRegs[16] = initRIP;
     vtRegs[14] = vtRegs[15] = (DWORD_PTR)pVtStack + 0x9000;
 
-    // ÉèÖÃĞéÄâ¼Ä´æÆ÷µÄ³õÖµ
+    // è®¾ç½®è™šæ‹Ÿå¯„å­˜å™¨çš„åˆå€¼
     /*
     * BofFunc(&commandPara, commandParaLength, &outputData, &outputDataLength, specialParaList);
     * lea rax, [specialParaList]
@@ -237,11 +237,11 @@ void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, c
     vtRegs[14] -= sizeof(DWORD_PTR);
     *(PDWORD_PTR)vtRegs[14] = vtRegs[16];
 
-    // ÔËĞĞ BOF º¯Êı
+    // è¿è¡Œ BOF å‡½æ•°
     RunBofFunc(bofFuncName, bofPayload, vtRegs);
 }
 
-// .text ÖØ¶¨Î»
+// .text é‡å®šä½
 char* TextReloc(char* op, int& relocIndex, vector<string>& textRelocNameVector, BofPayload& bofPayload) {
     char relocAddr[18];
     char* rip = strstr(op, (string(1, bofPayload.obfMap['r']) + "0000000000000000").c_str());
@@ -290,44 +290,39 @@ char* TextReloc(char* op, int& relocIndex, vector<string>& textRelocNameVector, 
     return op;
 }
 
-// ½âÎö Payload
+// è§£æ Payload
 void ParsePayload(char* payload, int payloadLength, BofPayload& bofPayload) {
-    // ÌáÈ¡ BOF º¯ÊıÆ«ÒÆ + .text ÖØ¶¨Î»Ãû³Æ + »ìÏıÓ³Éä + ×Ô¶¨Òå»ã±à + .rdata
+    // æå– BOF å‡½æ•°åç§» + .text é‡å®šä½åç§° + æ··æ·†æ˜ å°„ + è‡ªå®šä¹‰æ±‡ç¼– + .rdata
     int bofFuncOffsetDictLength = strlen(payload);
     bofPayload.bofFuncOffsetMap = (json::parse(payload)).get<map<string, int>>();
-    // cout << "BofFuncOffsetMap:\n" << payload << endl; // µ÷ÊÔ
+    // cout << "BofFuncOffsetMap:\n" << payload << endl; // è°ƒè¯•
 
     char* textRelocNameList = payload + bofFuncOffsetDictLength + 1;
     int textRelocNameListLength = strlen(textRelocNameList);
     vector<string> textRelocNameVector = json::parse(textRelocNameList);
-    // cout << "TextRelocNameVector:\n" << textRelocNameList << endl; // µ÷ÊÔ
+    // cout << "TextRelocNameVector:\n" << textRelocNameList << endl; // è°ƒè¯•
 
     char* obfDict = textRelocNameList + textRelocNameListLength + 1;
     int obfDictLength = strlen(obfDict);
     map<string, string> obfDictMap = (json::parse(obfDict)).get<map<string, string>>();
     bofPayload.obfMap = (char*)malloc(sizeof(char) * 130);
     for (const auto& pair : obfDictMap) {
-        char* endPtr;
-        int index = strtoull(pair.first.c_str(), &endPtr, 16);
-        if (*endPtr != '\0') {
-            throw exception("obfMap incorrect.");
-        }
-        bofPayload.obfMap[index] = pair.second[0];
+        bofPayload.obfMap[*pair.first.c_str()] = pair.second[0];
     }
-    // cout << "ObfDict:\n" << obfDict << endl; // µ÷ÊÔ
+    // cout << "ObfDict:\n" << obfDict << endl; // è°ƒè¯•
 
     char* selfAsmOriginal = obfDict + obfDictLength + 1;
     int selfAsmLength = strlen(selfAsmOriginal);
     bofPayload.selfAsm = (char*)malloc(selfAsmLength + 1);
     memcpy(bofPayload.selfAsm, selfAsmOriginal, selfAsmLength + 1);
-    // cout << "SelfAsm:\n" << bofPayload.selfAsm << endl; // µ÷ÊÔ
+    // cout << "SelfAsm:\n" << bofPayload.selfAsm << endl; // è°ƒè¯•
 
     bofPayload.rdataLength = payloadLength - bofFuncOffsetDictLength - textRelocNameListLength - obfDictLength - selfAsmLength - 4;
     bofPayload.pRdata = malloc(bofPayload.rdataLength);
     memcpy(bofPayload.pRdata, selfAsmOriginal + selfAsmLength + 1, bofPayload.rdataLength);
-    // cout << "pRdata:\n" << bofPayload.pRdata << endl; // µ÷ÊÔ
+    // cout << "pRdata:\n" << bofPayload.pRdata << endl; // è°ƒè¯•
 
-    // ½âÎö×Ô¶¨Òå»ã±à & .text ÖØ¶¨Î»
+    // è§£æè‡ªå®šä¹‰æ±‡ç¼– & .text é‡å®šä½
     for (int i = 0; i < selfAsmLength; i++) {
         if (*(bofPayload.selfAsm + i) == bofPayload.obfMap['_']) {
             *(bofPayload.selfAsm + i) = '\0';
@@ -337,7 +332,7 @@ void ParsePayload(char* payload, int payloadLength, BofPayload& bofPayload) {
     int offset = 0;
     int relocIndex = 0;
     while (*(bofPayload.selfAsm + offset) != '\0') {
-        // ĞéÄâµØÖ·
+        // è™šæ‹Ÿåœ°å€
         char* endPtr;
         DWORD_PTR vtAddr = strtoull(bofPayload.selfAsm + offset, &endPtr, 16);
         if (*endPtr != '\0') {
@@ -349,23 +344,23 @@ void ParsePayload(char* payload, int payloadLength, BofPayload& bofPayload) {
 
         SelfAsm* pCurrentSelfAsm = (SelfAsm*)malloc(sizeof(SelfAsm));
 
-        // Öú¼Ç·ûĞòºÅ
+        // åŠ©è®°ç¬¦åºå·
         pCurrentSelfAsm->mnemonicIndex = atoi(bofPayload.selfAsm + offset);
         offset += strlen(bofPayload.selfAsm + offset) + 1;
 
-        // ²Ù×÷Êı1 Î»Êı
+        // æ“ä½œæ•°1 ä½æ•°
         pCurrentSelfAsm->opBit1 = bofPayload.selfAsm + offset;
         offset += strlen(bofPayload.selfAsm + offset) + 1;
 
-        // ²Ù×÷Êı1
+        // æ“ä½œæ•°1
         pCurrentSelfAsm->op1 = TextReloc(bofPayload.selfAsm + offset, relocIndex, textRelocNameVector, bofPayload);
         offset += strlen(bofPayload.selfAsm + offset) + 1;
 
-        // ²Ù×÷Êı2 Î»Êı
+        // æ“ä½œæ•°2 ä½æ•°
         pCurrentSelfAsm->opBit2 = bofPayload.selfAsm + offset;
         offset += strlen(bofPayload.selfAsm + offset) + 1;
 
-        // ²Ù×÷Êı2
+        // æ“ä½œæ•°2
         pCurrentSelfAsm->op2 = TextReloc(bofPayload.selfAsm + offset, relocIndex, textRelocNameVector, bofPayload);
         offset += strlen(bofPayload.selfAsm + offset) + 1;
 
@@ -374,7 +369,7 @@ void ParsePayload(char* payload, int payloadLength, BofPayload& bofPayload) {
     }
     bofPayload.selfAsmLength = index;
 
-    // µ÷ÊÔ
+    // è°ƒè¯•
     /*cout << "SelfAsmLength: " << bofPayload.selfAsmLength << endl;
     for (int index = 0; index < bofPayload.selfAsmLength; index++) {
         cout << "Index: " << bofPayload.indexMap[bofPayload.vtAddrMap[index]];
