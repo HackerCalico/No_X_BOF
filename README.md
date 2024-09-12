@@ -6,15 +6,19 @@
 
 ### 1. 介绍
 
-无需解密，无需 X 内存，通过解释器直接加载运行 R 内存中的 BOF & ShellCode (见两个分支)。
+这是一个免杀项目，与 PWN 无关！
+
+无需解密，无需 X 内存，通过解释器直接加载运行 R 内存中的 BOF。
 
 x64 项目: https://github.com/HackerCalico/No_X_BOF
+
+项目原本为 No_X_Memory_ShellCode_Loader，已将其移入分支。
 
 规避了以下特征：
 
 (1) 申请 RWX 内存。
 
-(2) 来回修改 RW 和 RX 的内存属性。
+(2) 来回修改 W 和 X 的内存属性。
 
 (3) 内存中出现 BOF 特征码。
 
