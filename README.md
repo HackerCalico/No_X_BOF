@@ -18,7 +18,7 @@ x64 项目: https://github.com/HackerCalico/No_X_BOF
 
 (1) 申请 RWX 内存。
 
-(2) 来回修改 W 和 X 的内存属性。
+(2) 来回修改 RW 和 RX 的内存属性。
 
 (3) 内存中出现 BOF 特征码。
 
