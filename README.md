@@ -6,11 +6,9 @@
 
 ### 1. 介绍
 
-这是一个免杀项目，与 PWN 无关！
+https://github.com/HackerCalico/No_X_BOF-ShellCode
 
 无需解密，无需 X 内存，通过解释器直接加载运行 R 内存中的 BOF。
-
-x64 项目: https://github.com/HackerCalico/No_X_BOF
 
 项目原本为 No_X_Memory_ShellCode_Loader，已将其移入分支。
 
@@ -22,7 +20,7 @@ x64 项目: https://github.com/HackerCalico/No_X_BOF
 
 (3) 内存中出现 BOF 特征码。
 
-![1.png](https://raw.githubusercontent.com/HackerCalico/No_X_BOF/main/run.png)
+![1.png](https://raw.githubusercontent.com/HackerCalico/No_X_BOF-ShellCode/main/run.png)
 
 ### 2. 使用方法
 
@@ -77,4 +75,4 @@ Visual Studio Installer ---> 单个组件 ---> LLVM (clang-cl) 和 Clang ---> �
 
 最近比较忙，所以不能及时写。
 
-首先你要懂 BOF 加载原理，之后代码实现类似 No_X_Memory_ShellCode_Loader，可以先结合 https://github.com/HackerCalico/No_X_BOF/tree/No_X_Memory_ShellCode_Loader 研究一下。
+首先你要懂 BOF 加载原理，之后代码实现类似 No_X_Memory_ShellCode_Loader，可以先结合 https://github.com/HackerCalico/No_X_BOF-ShellCode/tree/No_X_Memory_ShellCode_Loader 研究一下。
