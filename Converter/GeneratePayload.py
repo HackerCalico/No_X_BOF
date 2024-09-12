@@ -124,11 +124,7 @@ def GeneratePayload(asm, rdata, textRelocNameList, bofFuncOffsetDict, isObf):
         obfDict['_'] = differChars[2]
 
     selfAsm = FormatAsm(asm)
-
-    obfDict2 = dict()
-    for key, value in obfDict.items():
-        obfDict2[str(hex(ord(key))[2:])] = value
-
+    
     mnemonicMap = '请手动在 Instruction.cpp 的 InvokeInstruction 函数开头定义:\n' \
                   'int jmpIndex = ' + str(mnemonics.index('jmp')) + ';\n'\
                   'PVOID mnemonicMap[] = { '
@@ -136,4 +132,4 @@ def GeneratePayload(asm, rdata, textRelocNameList, bofFuncOffsetDict, isObf):
         mnemonicMap += mnemonic[0].upper() + mnemonic[1:] + ', '
     print(mnemonicMap[:-2] + ' };')
 
-    return bofFuncOffsetDict.encode() + b'\x00' + textRelocNameList.encode() + b'\x00' + str(obfDict2).replace('\'', '"').encode() + b'\x00' + selfAsm.encode() + b'\x00' + rdata
+    return bofFuncOffsetDict.encode() + b'\x00' + textRelocNameList.encode() + b'\x00' + str(obfDict).replace('\'', '"').encode() + b'\x00' + selfAsm.encode() + b'\x00' + rdata
