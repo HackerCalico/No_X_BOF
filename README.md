@@ -1,4 +1,4 @@
-# No_X_BOF-ShellCode
+# No_X_BOF
 
 ### 请给我 Star 🌟，非常感谢！这对我很重要！
 
@@ -8,7 +8,7 @@
 
 无需解密，无需 X 内存，通过解释器直接加载运行 R 内存中的 BOF & ShellCode (见两个分支)。
 
-x64 项目: https://github.com/HackerCalico/No_X_BOF-ShellCode
+x64 项目: https://github.com/HackerCalico/No_X_BOF
 
 规避了以下特征：
 
@@ -18,7 +18,7 @@ x64 项目: https://github.com/HackerCalico/No_X_BOF-ShellCode
 
 (3) 内存中出现 BOF 特征码。
 
-![1.png](https://raw.githubusercontent.com/HackerCalico/No_X_BOF-ShellCode/main/run.png)
+![1.png](https://raw.githubusercontent.com/HackerCalico/No_X_BOF/main/run.png)
 
 ### 2. 使用方法
 
