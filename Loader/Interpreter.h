@@ -28,7 +28,6 @@ struct BofPayload {
     map<int, DWORD_PTR> vtAddrMap; // index -> 虚拟地址
     map<DWORD_PTR, int> indexMap; // 虚拟地址 -> index
     map<DWORD_PTR, SelfAsm*> selfAsmMap; // 虚拟地址 -> 自定义汇编
-    vector<PVOID> relocPtrVector;
 };
 
 void ParsePayload(char* payload, int payloadLength, BofPayload& bofPayload);

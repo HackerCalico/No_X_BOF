@@ -3,6 +3,7 @@
 
 PVOID pVtStack = NULL;
 DWORD_PTR initRIP = 0x12345678;
+map<string, string> winApiRelocAddrMap;
 
 // 计算 (未考虑“*”)
 DWORD_PTR Calculate(DWORD_PTR number1, DWORD_PTR number2, char symbol, char* obfMap) {
@@ -186,7 +187,7 @@ void RunBofFunc(char* bofFuncName, BofPayload& bofPayload, PDWORD_PTR vtRegs) {
     }
 }
 
-void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, char*& outputData, int& outputDataLength, PVOID* specialParaList, BofPayload& bofPayload) {
+void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, char*& outputData, int& outputDataLength, PVOID* specialParaList, BofPayload& bofPayload) {    
     // 创建虚拟栈
     if (pVtStack == NULL) {
         pVtStack = malloc(0x10000);
@@ -251,38 +252,43 @@ char* TextReloc(char* op, int& relocIndex, vector<string>& textRelocNameVector, 
             memcpy(rip, relocAddr, 17);
         }
         else {
-            char dllName[50];
-            sprintf_s(dllName, sizeof(dllName), "%s", textRelocNameVector[relocIndex].c_str());
-            char* dollar = strchr(dllName, '$');
-            if (dollar != NULL) {
-                *dollar = '\0';
-                char* funcName = dllName + strlen(dllName) + 1;
-                HMODULE hDll;
-                if (!strcmp(dllName, "Ntdll") || !strcmp(dllName, "Kernel32")) {
-                    hDll = GetModuleHandleA(dllName);
-                }
-                else {
-                    hDll = LoadLibraryA(dllName);
-                }
-                if (hDll != NULL) {
-                    DWORD_PTR funcAddr = (DWORD_PTR)GetProcAddress(hDll, funcName);
-                    if (funcAddr != NULL) {
-                        PVOID relocPtr = malloc(sizeof(DWORD_PTR));
-                        *(PDWORD_PTR)relocPtr = funcAddr;
-                        bofPayload.relocPtrVector.push_back(relocPtr);
-                        sprintf_s(relocAddr, sizeof(relocAddr), "%c%016llx", bofPayload.obfMap['i'], (DWORD_PTR)bofPayload.relocPtrVector.back());
-                        memcpy(rip, relocAddr, 17);
-                    }
-                    else {
-                        throw exception("GetProcAddress failed.");
-                    }
-                }
-                else {
-                    throw exception("Get Dll failed.");
-                }
+            if (winApiRelocAddrMap.find(textRelocNameVector[relocIndex].c_str()) != winApiRelocAddrMap.end()) {
+                memcpy(rip, winApiRelocAddrMap[textRelocNameVector[relocIndex].c_str()].c_str(), 17);
             }
             else {
-                throw exception("Can not reloc.");
+                char dllName[50];
+                sprintf_s(dllName, sizeof(dllName), "%s", textRelocNameVector[relocIndex].c_str());
+                char* dollar = strchr(dllName, '$');
+                if (dollar != NULL) {
+                    *dollar = '\0';
+                    char* funcName = dllName + strlen(dllName) + 1;
+                    HMODULE hDll;
+                    if (!strcmp(dllName, "Ntdll") || !strcmp(dllName, "Kernel32")) {
+                        hDll = GetModuleHandleA(dllName);
+                    }
+                    else {
+                        hDll = LoadLibraryA(dllName);
+                    }
+                    if (hDll != NULL) {
+                        DWORD_PTR funcAddr = (DWORD_PTR)GetProcAddress(hDll, funcName);
+                        if (funcAddr != NULL) {
+                            PVOID winApiPtr = malloc(sizeof(DWORD_PTR));
+                            *(PDWORD_PTR)winApiPtr = funcAddr;
+                            sprintf_s(relocAddr, sizeof(relocAddr), "%c%016llx", bofPayload.obfMap['i'], (DWORD_PTR)winApiPtr);
+                            winApiRelocAddrMap[textRelocNameVector[relocIndex].c_str()] = relocAddr;
+                            memcpy(rip, relocAddr, 17);
+                        }
+                        else {
+                            throw exception("GetProcAddress failed.");
+                        }
+                    }
+                    else {
+                        throw exception("Get Dll failed.");
+                    }
+                }
+                else {
+                    throw exception("Can not reloc.");
+                }
             }
         }
         relocIndex++;
@@ -312,18 +318,18 @@ void ParsePayload(char* payload, int payloadLength, BofPayload& bofPayload) {
     // cout << "ObfDict:\n" << obfDict << endl; // 调试
 
     char* selfAsmOriginal = obfDict + obfDictLength + 1;
-    int selfAsmLength = strlen(selfAsmOriginal);
-    bofPayload.selfAsm = (char*)malloc(selfAsmLength + 1);
-    memcpy(bofPayload.selfAsm, selfAsmOriginal, selfAsmLength + 1);
+    int selfAsmSize = strlen(selfAsmOriginal);
+    bofPayload.selfAsm = (char*)malloc(selfAsmSize + 1);
+    memcpy(bofPayload.selfAsm, selfAsmOriginal, selfAsmSize + 1);
     // cout << "SelfAsm:\n" << bofPayload.selfAsm << endl; // 调试
 
-    bofPayload.rdataLength = payloadLength - bofFuncOffsetDictLength - textRelocNameListLength - obfDictLength - selfAsmLength - 4;
+    bofPayload.rdataLength = payloadLength - bofFuncOffsetDictLength - textRelocNameListLength - obfDictLength - selfAsmSize - 4;
     bofPayload.pRdata = malloc(bofPayload.rdataLength);
-    memcpy(bofPayload.pRdata, selfAsmOriginal + selfAsmLength + 1, bofPayload.rdataLength);
+    memcpy(bofPayload.pRdata, selfAsmOriginal + selfAsmSize + 1, bofPayload.rdataLength);
     // cout << "pRdata:\n" << bofPayload.pRdata << endl; // 调试
 
     // 解析自定义汇编 & .text 重定位
-    for (int i = 0; i < selfAsmLength; i++) {
+    for (int i = 0; i < selfAsmSize; i++) {
         if (*(bofPayload.selfAsm + i) == bofPayload.obfMap['_']) {
             *(bofPayload.selfAsm + i) = '\0';
         }
@@ -368,6 +374,7 @@ void ParsePayload(char* payload, int payloadLength, BofPayload& bofPayload) {
         index++;
     }
     bofPayload.selfAsmLength = index;
+    textRelocNameVector.clear();
 
     // 调试
     /*cout << "SelfAsmLength: " << bofPayload.selfAsmLength << endl;
