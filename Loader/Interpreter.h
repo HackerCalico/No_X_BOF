@@ -31,6 +31,6 @@ struct BofPayload {
 };
 
 void ParsePayload(char* payload, int payloadLength, BofPayload& bofPayload);
-void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, char*& outputData, int& outputDataLength, PVOID* specialParaList, BofPayload& bofPayload);
+void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, char*& outputData, int& outputDataLength, PVOID specialParaList[], BofPayload& bofPayload);
 
 #endif

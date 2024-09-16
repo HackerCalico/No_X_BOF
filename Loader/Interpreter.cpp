@@ -6,7 +6,7 @@ DWORD_PTR initRIP = 0x12345678;
 map<string, string> winApiRelocAddrMap;
 
 // 计算 (未考虑“*”)
-DWORD_PTR Calculate(DWORD_PTR number1, DWORD_PTR number2, char symbol, char* obfMap) {
+DWORD_PTR Calculate(DWORD_PTR number1, DWORD_PTR number2, char symbol, char obfMap[]) {
     if (symbol == obfMap['+']) {
         return number1 + number2;
     }
@@ -17,7 +17,7 @@ DWORD_PTR Calculate(DWORD_PTR number1, DWORD_PTR number2, char symbol, char* obf
 }
 
 // 解析算式 (未考虑“*”)
-void ParseFormula(char* op, char** formula, char** symbols, char* obfMap) {
+void ParseFormula(char* op, char* formula[], char* symbols[], char obfMap[]) {
     int index = 1;
     int opLength = strlen(op);
     for (int i = 0; i < opLength; i++) {
@@ -40,7 +40,7 @@ void ParseFormula(char* op, char** formula, char** symbols, char* obfMap) {
 }
 
 // 获取操作数值的 Type(i立即数/r寄存器/m内存空间) & 地址
-DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, PDWORD_PTR vtRegs, DWORD_PTR* pOpNumber, char* obfMap) {
+DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, DWORD_PTR vtRegs[], DWORD_PTR* pOpNumber, char obfMap[]) {
     // cout << "CurrentOp: " << op << endl; // 调试
     // 立即数
     if (*op == obfMap['i']) {
@@ -130,7 +130,7 @@ DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, PDWORD_PTR vtRegs, DWORD_PT
 }
 
 // 运行 BOF 函数
-void RunBofFunc(char* bofFuncName, BofPayload& bofPayload, PDWORD_PTR vtRegs) {
+void RunBofFunc(char* bofFuncName, BofPayload& bofPayload, DWORD_PTR vtRegs[]) {
     DWORD_PTR bofFuncVtAddr = bofPayload.bofFuncOffsetMap[bofFuncName];
     for (int index = bofPayload.indexMap[bofFuncVtAddr]; index < bofPayload.selfAsmLength; index++) {
         vtRegs[16] = bofPayload.vtAddrMap[index];
@@ -187,7 +187,7 @@ void RunBofFunc(char* bofFuncName, BofPayload& bofPayload, PDWORD_PTR vtRegs) {
     }
 }
 
-void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, char*& outputData, int& outputDataLength, PVOID* specialParaList, BofPayload& bofPayload) {    
+void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, char*& outputData, int& outputDataLength, PVOID specialParaList[], BofPayload& bofPayload) {
     // 创建虚拟栈
     if (pVtStack == NULL) {
         pVtStack = malloc(0x10000);

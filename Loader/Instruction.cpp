@@ -3,17 +3,17 @@
 
 using namespace std;
 
-void Push(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Push(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     vtRegs[14] -= sizeof(DWORD_PTR);
     *(PDWORD_PTR)(vtRegs[14]) = *(PDWORD_PTR)(opAddr1);
 }
 
-void Pop(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Pop(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     *(PDWORD_PTR)(opAddr1) = *(PDWORD_PTR)(vtRegs[14]);
     vtRegs[14] += sizeof(DWORD_PTR);
 }
 
-void Call(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Call(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     // 保存真实栈顶栈底
     DWORD_PTR realRSP;
     DWORD_PTR realRBP;
@@ -112,12 +112,12 @@ void Call(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR o
     }
 }
 
-void Ret(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Ret(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     vtRegs[16] = *(PDWORD_PTR)vtRegs[14];
     vtRegs[14] = vtRegs[14] + sizeof(DWORD_PTR);
 }
 
-void Mov(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Mov(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     if (opBit1 == obfMap['q']) {
         *(PDWORD64)opAddr1 = *(PDWORD64)opAddr2;
     }
@@ -137,7 +137,7 @@ void Mov(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR op
     }
 }
 
-void Movzx(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Movzx(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     __asm {
         mov r12, qword ptr[opAddr1]
         mov r13, qword ptr[opAddr2]
@@ -166,21 +166,21 @@ void Movzx(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR 
     }
 }
 
-void Movabs(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Movabs(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     Mov(opType1, opBit1, opAddr1, opBit2, opAddr2, vtRegs, obfMap);
 }
 
-void Movsxd(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Movsxd(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     *(PDWORD64)opAddr1 = *(PDWORD)opAddr2;
 }
 
-void Lea(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Lea(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     Mov(opType1, opBit1, opAddr1, opBit2, opAddr2, vtRegs, obfMap);
 }
 
-void Nop(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {}
+void Nop(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {}
 
-void Add(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Add(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     if (opBit1 == obfMap['q']) {
         *(PDWORD64)opAddr1 += *(PDWORD64)opAddr2;
     }
@@ -200,7 +200,7 @@ void Add(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR op
     }
 }
 
-void Inc(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Inc(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     if (opBit1 == obfMap['q']) {
         *(PDWORD64)opAddr1 += 1;
     }
@@ -220,7 +220,7 @@ void Inc(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR op
     }
 }
 
-void Sub(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Sub(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     if (opBit1 == obfMap['q']) {
         *(PDWORD64)opAddr1 -= *(PDWORD64)opAddr2;
     }
@@ -240,7 +240,7 @@ void Sub(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR op
     }
 }
 
-void Cmp(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Cmp(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     __asm {
         mov r12, qword ptr[opAddr1]
         mov r13, qword ptr[opAddr2]
@@ -283,7 +283,7 @@ void Cmp(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR op
     vtRegs[17] = vtEFL;
 }
 
-void Imul(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Imul(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     if (opBit1 == obfMap['q']) {
         *(PDWORD64)opAddr1 *= *(PDWORD64)opAddr2;
     }
@@ -303,7 +303,7 @@ void Imul(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR o
     }
 }
 
-void And(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void And(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     if (opBit1 == obfMap['q']) {
         *(PDWORD64)opAddr1 &= *(PDWORD64)opAddr2;
     }
@@ -323,7 +323,7 @@ void And(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR op
     }
 }
 
-void Or(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Or(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     if (opBit1 == obfMap['q']) {
         *(PDWORD64)opAddr1 |= *(PDWORD64)opAddr2;
     }
@@ -343,7 +343,7 @@ void Or(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opA
     }
 }
 
-void Xor(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Xor(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     if (opBit1 == obfMap['q']) {
         *(PDWORD64)opAddr1 ^= *(PDWORD64)opAddr2;
     }
@@ -363,7 +363,7 @@ void Xor(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR op
     }
 }
 
-void Test(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Test(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     __asm {
         mov r12, qword ptr[opAddr1]
         mov r13, qword ptr[opAddr2]
@@ -406,7 +406,7 @@ void Test(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR o
     vtRegs[17] = vtEFL;
 }
 
-void Shl(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Shl(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     if (opBit1 == obfMap['q']) {
         *(PDWORD64)opAddr1 <<= *(PDWORD64)opAddr2;
     }
@@ -426,7 +426,7 @@ void Shl(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR op
     }
 }
 
-void Shr(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Shr(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     if (opBit1 == obfMap['q']) {
         *(PDWORD64)opAddr1 >>= *(PDWORD64)opAddr2;
     }
@@ -446,11 +446,11 @@ void Shr(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR op
     }
 }
 
-void Cdqe(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void Cdqe(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     vtRegs[0] = (DWORD)vtRegs[0];
 }
 
-void RepStosb(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void RepStosb(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     while (vtRegs[2]) { // vtRCX
         *(PBYTE)vtRegs[5] = *(PBYTE)&vtRegs[0]; // byte ptr [vtRDI] = al
         vtRegs[5]++;
@@ -458,7 +458,7 @@ void RepStosb(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_P
     }
 }
 
-void RepMovsb(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+void RepMovsb(char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     while (vtRegs[2]) { // vtRCX
         *(PBYTE)vtRegs[5] = *(PBYTE)vtRegs[4]; // byte ptr [vtRDI] = byte ptr [vtRSI]
         vtRegs[4]++;
@@ -549,7 +549,7 @@ int Jle(DWORD_PTR vtEFL) {
     return isJmp;
 }
 
-void Jcc(PVOID pInstructionFunc, DWORD_PTR opAddr1, PDWORD_PTR vtRegs) {
+void Jcc(PVOID pInstructionFunc, DWORD_PTR opAddr1, DWORD_PTR vtRegs[]) {
     DWORD_PTR vtEFL = vtRegs[17];
     int isJmp = ((int(*)(...))pInstructionFunc)(vtEFL);
     if (isJmp) {
@@ -558,7 +558,7 @@ void Jcc(PVOID pInstructionFunc, DWORD_PTR opAddr1, PDWORD_PTR vtRegs) {
 }
 
 // 调用指令
-int InvokeInstruction(int mnemonicIndex, char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, PDWORD_PTR vtRegs, char* obfMap) {
+int InvokeInstruction(int mnemonicIndex, char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[], char obfMap[]) {
     int jmpIndex = 24;
     PVOID mnemonicMap[] = { Push, Pop, Call, Ret, Mov, Movzx, Movabs, Movsxd, Lea, Nop, Add, Inc, Sub, Cmp, Imul, And, Or, Xor, Test, Shl, Shr, Cdqe, RepStosb, RepMovsb, Jmp, Je, Jne, Jbe, Jl, Jge, Jle };
     PVOID pInstructionFunc = mnemonicMap[mnemonicIndex];
