@@ -187,7 +187,7 @@ void RunBofFunc(char* bofFuncName, BofPayload& bofPayload, DWORD_PTR vtRegs[]) {
     }
 }
 
-void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, char*& outputData, int& outputDataLength, PVOID specialParaList[], BofPayload& bofPayload) {
+void MagicInvoke(char* bofFuncName, char* commandPara, int commandParaLength, char*& outputData, int& outputDataLength, PVOID specialParaList[], BofPayload& bofPayload) {
     // 创建虚拟栈
     if (pVtStack == NULL) {
         pVtStack = malloc(0x10000);
@@ -220,7 +220,7 @@ void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, c
 
     // 设置虚拟寄存器的初值
     /*
-    * BofFunc(&commandPara, commandParaLength, &outputData, &outputDataLength, specialParaList);
+    * BofFunc(commandPara, commandParaLength, &outputData, &outputDataLength, specialParaList);
     * lea rax, [specialParaList]
     * mov qword ptr [rsp+20h], rax
     * lea r9, [outputDataLength]
@@ -234,7 +234,7 @@ void MagicInvoke(char* bofFuncName, char*& commandPara, int commandParaLength, c
     vtRegs[7] = (DWORD_PTR)&outputDataLength;
     vtRegs[6] = (DWORD_PTR)&outputData;
     vtRegs[3] = commandParaLength;
-    vtRegs[2] = (DWORD_PTR)&commandPara;
+    vtRegs[2] = (DWORD_PTR)commandPara;
     vtRegs[14] -= sizeof(DWORD_PTR);
     *(PDWORD_PTR)vtRegs[14] = vtRegs[16];
 

