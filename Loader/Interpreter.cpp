@@ -131,6 +131,9 @@ DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, DWORD_PTR vtRegs[], DWORD_P
 
 // 运行 BOF 函数
 void RunBofFunc(char* bofFuncName, BofPayload& bofPayload, DWORD_PTR vtRegs[]) {
+    if (bofPayload.bofFuncOffsetMap.find(bofFuncName) == bofPayload.bofFuncOffsetMap.end()) {
+        throw exception("BofFuncName does not exist");
+    }
     DWORD_PTR bofFuncVtAddr = bofPayload.bofFuncOffsetMap[bofFuncName];
     for (int index = bofPayload.indexMap[bofFuncVtAddr]; index < bofPayload.selfAsmLength; index++) {
         vtRegs[16] = bofPayload.vtAddrMap[index];
