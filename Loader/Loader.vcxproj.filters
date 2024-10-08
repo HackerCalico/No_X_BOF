@@ -21,15 +21,9 @@
     <ClCompile Include="Interpreter.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Instruction.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Interpreter.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Instruction.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

