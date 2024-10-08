@@ -16,11 +16,10 @@ __declspec(noinline) DWORD_PTR GetOpTypeAndAddr(char* op, char* pOpType1, DWORD_
 __declspec(noinline) int TextReloc(char* op, char* textRelocNames, PVOID pRdata, int& relocIndex);
 __declspec(noinline) int InvokeInstruction(BYTE mnemonicIndex, char opType1, char opBit1, DWORD_PTR opAddr1, char opBit2, DWORD_PTR opAddr2, DWORD_PTR vtRegs[]);
 
-/*
-// 机器码混淆项目相关: https://github.com/HackerCalico/RAT_Obfuscator
+/*// 机器码混淆项目相关: https://github.com/HackerCalico/RAT_Obfuscator
+// 保证占位在 .shell 置顶
 #pragma code_seg(".shell$1")
 
-// 保证占位在 .shell 置顶
 __attribute__((naked)) void Placeholding1() {
     __asm {
         mov rax, 0x00
@@ -56,10 +55,10 @@ __attribute__((naked)) void Placeholding1() {
     }
 }
 
+// 保证 RunPayload 紧挨占位下方
 #pragma code_seg(".shell$2")
 */
 
-// 保证 RunPayload 紧挨占位下方
 int RunPayload(PBYTE pPayload, int payloadSize, int bofFuncHash, char* commandPara, int commandParaLen, char*& outputData, int& outputDataLen, PVOID specialParaList[]) {    
     // 解析 Payload
     if (payloadSize < sizeof(WORD)) {
@@ -791,10 +790,9 @@ __declspec(noinline) int InvokeInstruction(BYTE mnemonicIndex, char opType1, cha
     return 0;
 }
 
-/*
+/*// 保证占位在 .shell 置底
 #pragma code_seg(".shell$3")
 
-// 保证占位在 .shell 置底
 __attribute__((naked)) void Placeholding2() {
     __asm {
         mov rax, 0x00
