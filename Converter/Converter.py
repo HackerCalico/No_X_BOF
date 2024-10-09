@@ -10,7 +10,7 @@ if __name__ == '__main__':
 ╚═╝  ╚═══╝ ╚═════╝    ╚═╝  ╚═╝   ╚═════╝  ╚═════╝ ╚═╝     
 https://github.com/HackerCalico/No_X_BOF''')
     print('1.反汇编\n2.生成 Payload')
-    choice = input('\033[94m' + 'Choice: ' + '\033[0m')
+    choice = input('\033[94m' + 'choice: ' + '\033[0m')
 
     if choice == '1':
         with open('..\\BOF\\bof.o', 'rb') as file:
