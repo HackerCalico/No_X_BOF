@@ -488,9 +488,9 @@ __declspec(noinline) int InvokeInstruction(BYTE mnemonicIndex, char opType1, cha
             cmp r14, 0x01
             jne notJmp
             mov rax, qword ptr[opAddr1]
-            mov rbx, qword ptr[rax]
+            mov rcx, qword ptr[rax]
             mov rax, qword ptr[vtRegs]
-            mov qword ptr[rax + 0x80], rbx // vtRIP
+            mov qword ptr[rax + 0x80], rcx // vtRIP
             notJmp:
         }
     }
@@ -633,9 +633,9 @@ __declspec(noinline) int InvokeInstruction(BYTE mnemonicIndex, char opType1, cha
                     mov qword ptr[rax + 0x58], r13
                     mov qword ptr[rax + 0x60], r14
                     mov qword ptr[rax + 0x68], r15
-                    pop rbx
+                    pop rcx
                     mov qword ptr[rax + 0x70], rsp
-                    mov qword ptr[rax], rbx
+                    mov qword ptr[rax], rcx
                     // 还原真实栈顶
                     mov rsp, realRSP
                 }
@@ -706,8 +706,8 @@ __declspec(noinline) int InvokeInstruction(BYTE mnemonicIndex, char opType1, cha
                 setEFL:
                 pushf
                 pop rax
-                mov rbx, qword ptr[vtRegs]
-                mov qword ptr[rbx + 0x88], rax // vtEFL
+                mov rcx, qword ptr[vtRegs]
+                mov qword ptr[rcx + 0x88], rax // vtEFL
             }
         }
         else if (mnemonicIndex == testIndex) {
@@ -740,8 +740,8 @@ __declspec(noinline) int InvokeInstruction(BYTE mnemonicIndex, char opType1, cha
                 setEFL:
                 pushf
                 pop rax
-                mov rbx, qword ptr[vtRegs]
-                mov qword ptr[rbx + 0x88], rax // vtEFL
+                mov rcx, qword ptr[vtRegs]
+                mov qword ptr[rcx + 0x88], rax // vtEFL
             }
         }
         else if (mnemonicIndex == shlIndex) {
